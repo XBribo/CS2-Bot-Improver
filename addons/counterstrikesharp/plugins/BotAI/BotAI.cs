@@ -23,7 +23,7 @@ public static class BotOffsets
 public class BotAI : BasePlugin
 {
     public override string ModuleName        => "Patches - Bot AI";
-    public override string ModuleVersion     => "1.7.3";
+    public override string ModuleVersion     => "1.8.0";
     public override string ModuleAuthor      => "K4ryuu & Austin (updated by ed0ard)";
     public override string ModuleDescription =>
         "Improve and fix bots' behavior comprehensively";
@@ -99,20 +99,6 @@ public class BotAI : BasePlugin
         ),
 
 
-        ["SprayAllDistances_FireDecision1"] = (
-            signature:        "F3 0F 10 87 ? 00 00 00 0F 2F C7 76 12 48 8B 05",
-            patch:            "90 90",
-            expectedOriginal: "76 12",
-            patchOffset:      11    // RVA 0x2f0d53
-        ),
-
-        ["SprayAllDistances_FireDecision2"] = (
-            signature:        "0F 2F 40 30 76 05 40 B5 01 EB 03 40 32 ED",
-            patch:            "90 90",
-            expectedOriginal: "76 05",
-            patchOffset:      4    // RVA 0x2f0d60
-        ),
-
         ["AttackState_SkipFireRateCheck"] = (
             signature:        "0F 2F 8B ? ? 00 00 0F 82",
             patch:            "90 90 90 90 90 90",
@@ -120,6 +106,16 @@ public class BotAI : BasePlugin
             patchOffset:      7    // VA 0x1802f22a0
         ),
 
+        // Force bot to hold the trigger at all ranges & all weapons.
+        // At the trigger gate, the release-between-shots flag bpl is set to 1 (tap/burst)
+        // when fire delay > one tick. Rewrite "mov bpl,1" -> "xor bpl,bpl" so bpl is
+        // always 0 (hold trigger) -> continuous spray everywhere; recoil control follows.
+        ["SprayAllDistances_ForceHoldTrigger"] = (
+            signature:        "76 12 48 8B 05 ? ? ? ? 0F 2F 40 30 76 05 40 B5 01 EB 03 40 32 ED",
+            patch:            "40 32 ED",
+            expectedOriginal: "40 B5 01",
+            patchOffset:      15
+        ),
 
         ["AttackState_SkipSteadyFireShortcut"] = (
             signature:        "0F B6 F0 84 C0 74 3C 48 8B 4B 18 48 8B 11 FF 92 90 00 00 00",
@@ -140,42 +136,6 @@ public class BotAI : BasePlugin
             patch:            "90 90 90 90 90 90",
             expectedOriginal: "0F 86 8A 04 00 00",
             patchOffset:      24  // RVA 0x320153: NOP jbe+47B
-        ),
-
-
-        ["SprayAllDistances_ja1"] = (
-            signature:        "0F 2F F9 F3 44 0F 10 15 ? ? ? ? 77 22",
-            patch:            "90 90",
-            expectedOriginal: "77 22",
-            patchOffset:      12
-        ),
-
-        ["SprayAllDistances_ja2"] = (
-            signature:        "F3 0F 10 4C AB 7C 44 0F 28 C8 0F 2F F9 77 21",
-            patch:            "90 90",
-            expectedOriginal: "77 21",
-            patchOffset:      13
-        ),
-
-        ["SprayAllDistances_ja3"] = (
-            signature:        "0F 2F FA 77 17 48 8B CF E8",
-            patch:            "90 90",
-            expectedOriginal: "77 17",
-            patchOffset:      3
-        ),
-
-        ["SprayAllDistances_ja4"] = (
-            signature:        "0F 10 94 AB ? 00 00 00 0F 2F FA 77 13 48",
-            patch:            "90 90",
-            expectedOriginal: "77 13",
-            patchOffset:      11
-        ),
-
-        ["AttackState_SprayRangeExtend"] = (
-            signature:        "76 0B F3 44 0F 10 05 ? ? ? ? EB 09 F3 44 0F 10 05",
-            patch:            "6C 6D 29 01",
-            expectedOriginal: "? ? ? ?",
-            patchOffset:      7
         ),
 
 
