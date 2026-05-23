@@ -8,6 +8,13 @@ bot_aim head
 bot_aim body
 bot_aim mixed
 
+BOT NADE THROWING
+
+bot_nades normal
+bot_nades more
+bot_nades max
+bot_nades off
+
 ADD TEAMS
 
 1.Team Vitality
