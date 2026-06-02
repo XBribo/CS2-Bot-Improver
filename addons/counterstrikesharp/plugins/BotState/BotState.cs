@@ -15,7 +15,7 @@ namespace BotState;
 public class BotState : BasePlugin
 {
     public override string ModuleName => "Smarter-Bot";
-    public override string ModuleVersion => "1.7.1";
+    public override string ModuleVersion => "1.7.2";
     public override string ModuleAuthor => "ed0ard & XBribo";
     public override string ModuleDescription => "Make bots smarter";
 
