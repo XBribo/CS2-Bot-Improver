@@ -2,6 +2,9 @@ GAME MODE
 scouts_on
 scouts_off
 
+CONNECTION
+status
+
 BOT AIM STYLE
 
 bot_aim head
