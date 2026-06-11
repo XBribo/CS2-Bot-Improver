@@ -24,17 +24,12 @@ public class BotAI : BasePlugin
 {
     public override string ModuleName        => "Patches - Bot AI";
     public override string ModuleVersion     => "1.8.4";
-    public override string ModuleAuthor      => "K4ryuu & Austin (updated by ed0ard)";
+    public override string ModuleAuthor      => "K4ryuu & Austin (updated by ed0ard & Misaka17032)";
     public override string ModuleDescription =>
         "Improve and fix bots' behavior comprehensively";
 
     private readonly List<PatchInfo> _appliedPatches = [];
     private readonly bool _isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-    private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
-    private readonly Dictionary<string, bool> _patchStatus = [];
-    private int _spawnEventCounter;
-    private int _bombStateResetCount;
-    private int _bombStateAlreadyZeroCount;
 
     private readonly Dictionary<string, (string signature, string patch, string expectedOriginal, int patchOffset)>
         _patchDefinitions = new()
@@ -733,10 +728,8 @@ public class BotAI : BasePlugin
 
         foreach (var name in patchDefinitions.Keys)
         {
-            var patched = ApplyPatch(name, _isLinux);
-            _patchStatus[name] = patched;
-            if (patched) Logger.LogInformation($"{name}: applied.");
-            else                  Logger.LogError($"{name}: FAILED.");
+            if (ApplyPatch(name, _isLinux)) Logger.LogInformation($"{name}: applied.");
+            else                            Logger.LogError($"{name}: FAILED.");
         }
 
         RegisterEventHandler<EventPlayerSpawn>((@event, info) =>
@@ -756,30 +749,15 @@ public class BotAI : BasePlugin
 
             if (gameRules == null || gameRules.BombPlanted) return HookResult.Continue;
 
-            var spawnIndex = ++_spawnEventCounter;
             UpdateBotBombState(pawn, player.PlayerName);
-            if (spawnIndex % 12 == 0)
-            {
-                LogBotAIStatus($"spawn #{spawnIndex}");
-            }
             return HookResult.Continue;
         });
 
-        Logger.LogInformation($"Applied {_appliedPatches.Count}/{patchDefinitions.Count} patches on {(_isLinux ? "Linux" : "Windows")}.");
-        LogBotAIStatus("Load() finished");
-        if (_isLinux)
-        {
-            var skippedPatchNames = _patchDefinitions.Keys.Except(_patchDefinitionsLinux.Keys).OrderBy(x => x).ToList();
-            if (skippedPatchNames.Count > 0)
-            {
-                Logger.LogWarning($"Linux signatures missing for {_patchDefinitions.Count - _patchDefinitionsLinux.Count} patches: {string.Join(", ", skippedPatchNames)}");
-            }
-        }
+        Logger.LogInformation($"Applied {_appliedPatches.Count}/{patchDefinitions.Count} patches.");
     }
 
     public override void Unload(bool hotReload)
     {
-        LogBotAIStatus("Unload() start");
         Logger.LogInformation("Bot AI Patches unloading...");
         foreach (var patch in _appliedPatches) RestorePatch(patch);
         _appliedPatches.Clear();
@@ -877,47 +855,13 @@ public class BotAI : BasePlugin
             nint bombAddr = gsPtr + BotOffsets.m_bombState;
             if (!IsValid(bombAddr)) return false;
             if (!MemoryPatch.SetMemAccess(bombAddr, sizeof(int))) return false;
-            var originalBombState = Marshal.ReadInt32(bombAddr);
-            if (originalBombState != 0)
-            {
-                Marshal.WriteInt32(bombAddr, 0);
-                _bombStateResetCount++;
-                Logger.LogInformation($"[BotAI] bombState reset for {playerName}: {originalBombState} -> 0");
-            }
-            else
-            {
-                _bombStateAlreadyZeroCount++;
-            }
+            if (Marshal.ReadInt32(bombAddr) != 0) Marshal.WriteInt32(bombAddr, 0);
             return true;
         }
         catch (Exception ex)
         {
             Logger.LogError($"UpdateBotBombState({playerName}): {ex.Message}");
             return false;
-        }
-    }
-
-    private void LogBotAIStatus(string reason)
-    {
-        var failed = _patchStatus.Where(kv => !kv.Value).Select(kv => kv.Key).ToList();
-        var uptime = DateTimeOffset.UtcNow - _startedAt;
-        if (failed.Count == 0)
-        {
-            Logger.LogInformation($"[BotAI Status] {reason}: mode={(_isLinux ? "Linux" : "Windows")}, " +
-                                  $"patches={_appliedPatches.Count}/{_patchStatus.Count}, " +
-                                  $"spawnEvents={_spawnEventCounter}, " +
-                                  $"bombReset={_bombStateResetCount}, " +
-                                  $"bombAlreadyZero={_bombStateAlreadyZeroCount}, " +
-                                  $"uptime={uptime:c}");
-        }
-        else
-        {
-            Logger.LogWarning($"[BotAI Status] {reason}: mode={(_isLinux ? "Linux" : "Windows")}, " +
-                              $"patches={_appliedPatches.Count}/{_patchStatus.Count}, failed={failed.Count} ({string.Join(", ", failed)}), " +
-                              $"spawnEvents={_spawnEventCounter}, " +
-                              $"bombReset={_bombStateResetCount}, " +
-                              $"bombAlreadyZero={_bombStateAlreadyZeroCount}, " +
-                              $"uptime={uptime:c}");
         }
     }
 }
