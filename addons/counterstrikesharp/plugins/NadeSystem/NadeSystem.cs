@@ -116,6 +116,7 @@ public class NadeSystemPlugin : BasePlugin
     private HashSet<uint>         _smokeCooldownBots = new();
     private int                   _tick              = 0;
     private bool                  _roundOver         = false;
+    private int                   _roundSerial       = 0;
     private float                 _freezeEndTime     = 0f;
     private Dictionary<uint, int> _roundSpendPerBot  = new();
     private HashSet<uint>         _poorBots          = new();
@@ -271,6 +272,7 @@ public class NadeSystemPlugin : BasePlugin
     //  Load
     // ═══════════════════════════════════════════════════════════
 
+
     public override void Load(bool hotReload)
     {
         Directory.CreateDirectory(DataDir);
@@ -361,8 +363,7 @@ public class NadeSystemPlugin : BasePlugin
 
     private void CheckBotZones()
     {
-        var rules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
-        if (rules?.GameRules?.FreezePeriod == true) return;
+        if (IsFreezePeriod()) return;
         // Don't throw nades if the round is over
         if (_roundOver) return;
 
@@ -390,6 +391,11 @@ public class NadeSystemPlugin : BasePlugin
 
             if (!bot.PawnIsAlive) continue;
             if (_replayBots.Contains((uint)bot.Index)) continue;
+            // Skip bots under ProOpeningReplay control. ProReplay sets InhibitLookAroundTimestamp
+            // to CurrentTime+0.2 every tick during replay, and resets it to 0 on EndSession.
+            // This check also skips bots that just heard an enemy (PrimeBotForHeardEnemy), which
+            // is intentional — a bot reacting to sound shouldn't auto-throw a lineup grenade.
+            if (pawn.Bot.InhibitLookAroundTimestamp > Server.CurrentTime) continue;
 
             var pos = pawn.AbsOrigin;
             if (pos == null) continue;
@@ -854,6 +860,17 @@ public class NadeSystemPlugin : BasePlugin
         // Expensure Limit
         bool deductMoney = alreadySpent < spendCap;
 
+        // ── Inventory check — bot must actually have the grenade ────────
+        var pawn = bot.PlayerPawn?.Value;
+        if (pawn?.WeaponServices == null) return;
+
+        string weaponName = GrenadeTypeToWeaponName(gtype, isCT);
+        int inventoryCount = pawn.WeaponServices.MyWeapons
+            .Select(h => h.Value)
+            .Count(w => w != null && w.IsValid
+                && w.DesignerName.Equals(weaponName, StringComparison.OrdinalIgnoreCase));
+        if (inventoryCount <= 0) return;
+
         // ── All checks passed — commit ─────────────────────────────────
         if (deductMoney)
         {
@@ -861,6 +878,9 @@ public class NadeSystemPlugin : BasePlugin
             Utilities.SetStateChanged(bot, "CCSPlayerController", "m_pInGameMoneyServices");
             _roundSpendPerBot[botIdx] = alreadySpent + cost;
         }
+
+        // Remove the grenade from the bot's inventory
+        bot.RemoveItemByDesignerName(weaponName);
 
         _replayBots.Add((uint)bot.Index);
         RegisterCooldown(g.Id, gtype);
@@ -906,11 +926,17 @@ public class NadeSystemPlugin : BasePlugin
 
         var teamNum  = bot.TeamNum;
         var itemDef  = (int)GetItemIndex(gtype);
+        int scheduledRound = _roundSerial;
 
         Server.NextFrame(() =>
         {
             try
             {
+                if (scheduledRound != _roundSerial || _roundOver || IsFreezePeriod())
+                    return;
+                if (!bot.IsValid || !bot.IsBot || !bot.PawnIsAlive || bot.HasBeenControlledByPlayerThisRound)
+                    return;
+
                 var botPawn = bot.PlayerPawn?.Value;
                 if (botPawn == null || !botPawn.IsValid)
                 {
@@ -1160,6 +1186,19 @@ public class NadeSystemPlugin : BasePlugin
     private void RegisterProbFailCooldown(string id)
         => _probFailCooldown[id] = Server.CurrentTime + 3f;
 
+    /// <summary>
+    /// Maps the grenade type string to the CS2 weapon designer name that
+    /// appears in the player's inventory (WeaponServices.MyWeapons).
+    /// </summary>
+    private static string GrenadeTypeToWeaponName(string gtype, bool isCT) => gtype switch
+    {
+        "smoke"   => "weapon_smokegrenade",
+        "flash"   => "weapon_flashbang",
+        "he"      => "weapon_hegrenade",
+        "molotov" => isCT ? "weapon_incgrenade" : "weapon_molotov",
+        _         => "weapon_smokegrenade",
+    };
+
     private static float Dist3D(float x1, float y1, float z1, float x2, float y2, float z2)
     {
         float dx = x1-x2, dy = y1-y2, dz = z1-z2;
@@ -1185,6 +1224,7 @@ public class NadeSystemPlugin : BasePlugin
 
     private HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
     {
+        _roundSerial++;
         _roundOver  = false;
         _freezeEndTime = 0f;
         _roundCountByTeam.Clear();
@@ -1230,8 +1270,15 @@ public class NadeSystemPlugin : BasePlugin
 
     private HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
     {
+        _roundSerial++;
         _roundOver = true;
         return HookResult.Continue;
+    }
+
+    private static bool IsFreezePeriod()
+    {
+        var rules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
+        return rules?.GameRules?.FreezePeriod == true;
     }
 
     private bool IsPistolRound()
@@ -1694,10 +1741,16 @@ public class NadeSystemPlugin : BasePlugin
         }
 
         var vel = velocity ?? new Vector(0f, 0f, 0f);
+        int scheduledRound = _roundSerial;
         Server.NextFrame(() =>
         {
             try
             {
+                if (scheduledRound != _roundSerial || _roundOver || IsFreezePeriod())
+                    return;
+                if (!bot.IsValid || !bot.IsBot || !bot.PawnIsAlive || bot.HasBeenControlledByPlayerThisRound)
+                    return;
+
                 var botPawn = bot.PlayerPawn?.Value;
                 if (botPawn == null || !botPawn.IsValid) return;
 
