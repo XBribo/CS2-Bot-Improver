@@ -7,7 +7,7 @@ BETTERBOT_ROOT="$(cd "$IMPROVER_ROOT/.." && pwd)"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 DEMOS_DIR="${DEMOS_DIR:-$BETTERBOT_ROOT/demos}"
-JOBS="${JOBS:-8}"
+JOBS="${JOBS:-4}"
 MAX_TASKS_PER_CHILD="${MAX_TASKS_PER_CHILD:-1}"
 RESET="${RESET:-1}"
 WORK_DIR="${WORK_DIR:-$SCRIPT_DIR/data/archive_work}"
@@ -19,10 +19,11 @@ fi
 import importlib.util
 import sys
 
-missing = [name for name in ("demoparser2", "tqdm") if importlib.util.find_spec(name) is None]
+missing = [name for name in ("brotli", "demoparser2", "requests", "tqdm") if importlib.util.find_spec(name) is None]
 if missing:
     print("Missing Python package(s): " + ", ".join(missing), file=sys.stderr)
-    print("Install them with: python3 -m pip install demoparser2 tqdm", file=sys.stderr)
+    print("Install them with: python3 -m pip install requests tqdm brotli", file=sys.stderr)
+    print("Then install patched demoparser2 with: tools/pro_opening_replay/install_custom_demoparser.sh", file=sys.stderr)
     raise SystemExit(1)
 PY
 

@@ -9,14 +9,21 @@ The current workflow reads native `.dem` files directly, including `.dem` member
 Required tools:
 
 - Python 3.10 or newer
-- `demoparser2`
+- Rust toolchain
+- `maturin`
 - `7z` for archive listing
 - `unrar` for RAR5 extraction
 
-Install the Python dependency if needed:
+The extractor depends on a patched `demoparser2` build. The patch is kept in
+`demoparser2_custom.patch` and adds the CS2 usercmd fields needed by native
+`.cs2rec` export, including subtick move data, weapon select, left-hand desired,
+and attack history indices.
+
+Install the Python dependencies and patched parser if needed:
 
 ```bash
-python3 -m pip install demoparser2 requests tqdm
+python3 -m pip install requests tqdm brotli maturin
+CS2-Bot-Improver/tools/pro_opening_replay/install_custom_demoparser.sh
 ```
 
 Build the runtime manifests and `.cs2rec` records used by the plugin:
@@ -27,10 +34,10 @@ CS2-Bot-Improver/tools/pro_opening_replay/export_all_cs2rec.sh
 
 The `extract` command scans every `.dem` file and every `.dem` member inside supported archives, reads the demo header's actual map name, and writes each route to that map's manifest and record directory. Keep `--stride 1` for native replay parity; the `.cs2rec` reader consumes one record per simulation tick. New exports use the v3 gzip compact layout and are expanded to native tick buffers at load time. `--jobs 0` uses all available CPU cores. `--economy-sample-seconds` controls how long after freeze end the pro balance/loadout economy snapshot is taken. Use `--map de_inferno` only when intentionally filtering to one map. Use `--strict` only when debugging; by default the extractor skips a corrupt archive or demo and keeps building the rest.
 
-The wrapper script defaults to `DEMOS_DIR=~/code/betterbot/demos`, `JOBS=8`, `MAX_TASKS_PER_CHILD=1`, `RESET=1`, and enables a tqdm progress bar. Override those values from the shell when needed:
+The wrapper script defaults to `DEMOS_DIR=~/code/betterbot/demos`, `JOBS=4`, `MAX_TASKS_PER_CHILD=1`, `RESET=1`, and enables a tqdm progress bar. Four workers is the default because demoparser's per-process memory spikes are high on large HLTV batches. Override those values from the shell when needed:
 
 ```bash
-JOBS=4 RESET=0 CS2-Bot-Improver/tools/pro_opening_replay/export_all_cs2rec.sh --map de_inferno
+JOBS=2 RESET=0 CS2-Bot-Improver/tools/pro_opening_replay/export_all_cs2rec.sh --map de_inferno
 ```
 
 ## Build The Plugin
