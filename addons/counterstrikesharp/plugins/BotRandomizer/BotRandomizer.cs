@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -38,7 +39,7 @@ public class BotRandomizerPlugin : BasePlugin
     private readonly HashSet<(ushort DefIndex, int Paint)> _legacyPaints = new();
 
     // Chosen gun paint per (bot slot, weapon defindex). Guns are skinned from
-    // several places (the GiveNamedItem hook plus spawn timers); 
+    // several places (the GiveNamedItem hook plus spawn timers);
     private readonly Dictionary<(int Slot, ushort DefIndex), int> _botGunPaints = new();
 
     // Knife-universal paint kit ids. Validated against skins_en.json to work on
@@ -310,6 +311,9 @@ public class BotRandomizerPlugin : BasePlugin
             _botGunPaints.Clear();
             foreach (var m in CtModels) Server.PrecacheModel(m);
             foreach (var m in TModels)  Server.PrecacheModel(m);
+
+            // Auto-exec the right bot config based on the active gamemode.
+            AddTimer(1.0f, AutoExecBotCfg);
         });
 
         RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
@@ -522,7 +526,7 @@ public class BotRandomizerPlugin : BasePlugin
             _setAttrByName.Invoke(item.AttributeList.Handle, "set item texture seed", 0f);
             _setAttrByName.Invoke(item.AttributeList.Handle, "set item texture wear", 0.01f);
 
-            Utilities.SetStateChanged(weapon, "CEconEntity", "m_AttributeManager");
+            MarkWeaponPaintStateChanged(weapon);
 
             // Flip the weapon "body" bodygroup so the paint maps to the correct
             // position: legacy-model skins use UV layout 1, current-model skins
@@ -554,9 +558,9 @@ public class BotRandomizerPlugin : BasePlugin
                 if (string.IsNullOrEmpty(name)) continue;
                 if (!(name.Contains("knife") || name == "weapon_bayonet")) continue;
 
-                // Force subclass (model/anim) to match itemdef (name) on every pass.
+                // Force subclass (model/anim) to match itemdef on every pass.
                 // ChangeSubclass is async and may miss on a not-yet-deployed entity;
-                // gating it on itemdef would leave them permanently out of sync.
+                // gating it on itemdef can leave them permanently out of sync.
                 w.AcceptInput("ChangeSubclass", value: defIndex.ToString());
 
                 var item = w.AttributeManager?.Item;
@@ -585,7 +589,7 @@ public class BotRandomizerPlugin : BasePlugin
                     _setAttrByName.Invoke(item.AttributeList.Handle, "set item texture wear", 0.01f);
                 }
 
-                Utilities.SetStateChanged(w, "CEconEntity", "m_AttributeManager");
+                MarkWeaponPaintStateChanged(w);
                 break;
             }
         }
@@ -644,6 +648,25 @@ public class BotRandomizerPlugin : BasePlugin
         item.ItemIDHigh = (uint)(id >> 32);
     }
 
+    private static void AutoExecBotCfg()
+    {
+        // Pick which bot cfg to auto-exec based on the gamemode/type cvars.
+        // game_type 1 / game_mode 2  = deathmatch (FFA)
+        // anything else              = normal (5v5 / casual / competitive)
+        string cfg = "my_bot_normal_config";
+        try
+        {
+            var gameType = ConVar.Find("game_type")?.GetPrimitiveValue<int>() ?? -1;
+            var gameMode = ConVar.Find("game_mode")?.GetPrimitiveValue<int>() ?? -1;
+            if (gameType == 1 && gameMode == 2)
+                cfg = "my_bot_ffa_config";
+        }
+        catch { }
+
+        Console.WriteLine($"[BotRandomizer] Auto-exec {cfg}.cfg");
+        Server.ExecuteCommand($"exec {cfg}");
+    }
+
     // Build the legacy-model lookup from skins_en.json.
     // Each entry: { "weapon_defindex": int, "paint": int|string, "legacy_model": bool }.
     private void LoadLegacyPaints()
@@ -684,7 +707,7 @@ public class BotRandomizerPlugin : BasePlugin
 
     // When a bot picks up a specific knife at runtime, the knife's model swaps but its
     // subclass can stay the one ReplaceKnife pinned at spawn,
-    // so the new knife plays the bound knife's animations. 
+    // so the new knife plays the bound knife's animations.
     // We re-resolve the subclass from the knife's own designer name to fix that.
     [GameEventHandler]
     public HookResult OnItemPickup(EventItemPickup @event, GameEventInfo info)
@@ -820,5 +843,12 @@ public class BotRandomizerPlugin : BasePlugin
         }
 
         return HookResult.Continue;
+    }
+
+    private static void MarkWeaponPaintStateChanged(CBaseEntity weapon)
+    {
+        Utilities.SetStateChanged(weapon, "CEconEntity", "m_nFallbackPaintKit");
+        Utilities.SetStateChanged(weapon, "CEconEntity", "m_nFallbackSeed");
+        Utilities.SetStateChanged(weapon, "CEconEntity", "m_flFallbackWear");
     }
 }

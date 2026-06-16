@@ -22,6 +22,7 @@ public sealed class RoundDamageRecapPlugin : BasePlugin
     private readonly Dictionary<int, PlayerSnapshot> _playersByKey = new();
     private bool _announcedDifficultyThisMap;
 
+
     public override void Load(bool hotReload)
     {
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
@@ -330,7 +331,7 @@ public sealed class RoundDamageRecapPlugin : BasePlugin
 
     private static bool IsEligibleRecipient(CCSPlayerController? player)
     {
-        return IsTrackablePlayer(player) && player is { IsBot: false };
+        return IsTrackablePlayer(player) && !player!.IsBot;
     }
 
     private sealed class DamageEntry

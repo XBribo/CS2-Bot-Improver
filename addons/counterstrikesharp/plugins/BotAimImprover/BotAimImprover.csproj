@@ -16,5 +16,4 @@
       <HintPath>libs/RayTraceApi.dll</HintPath>
     </Reference>
   </ItemGroup>
-
 </Project>

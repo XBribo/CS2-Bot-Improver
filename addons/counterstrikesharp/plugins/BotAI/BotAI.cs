@@ -14,7 +14,8 @@ public record PatchInfo(string Name, nint Address, List<byte> OriginalBytes);
 
 public static class BotOffsets
 {
-    public const int m_gameState   = 0x6038;
+    public const int m_gameStateWindows = 0x6038;
+    public const int m_gameStateLinux   = 0x5108;
     public const int m_isRoundOver = 0x08;
     public const int m_bombState   = 0x0C;
 }
@@ -580,20 +581,20 @@ public class BotAI : BasePlugin
             patchOffset:      15
         ),
 
-        // Always take approach-body path in Vision logic.
-        ["Vision_AlwaysEnterApproachBody"] = (
+        // CCSBot::UpdateLookAround: always watch approach points, matching the Windows flag gate.
+        ["Vision_AlwaysWatchApproachPoints"] = (
             signature:        "80 BB 39 04 00 00 00 0F 85 ? ? ? ? E9 ? ? ? ? F3 0F 10 8D 00 FF FF FF",
             patch:            "E9 A5 FD FF FF 90",
             expectedOriginal: "0F 85 ? ? ? ?",
             patchOffset:      7
         ),
 
-        // CCSBot::UpdateLookAround: run the approach-point watch loop whenever present.
-        ["Vision_AlwaysWatchApproachPoints"] = (
-            signature:        "F3 0F 58 85 EC FE FF FF 80 BB F8 54 00 00 00 F3 0F 11 83 30 53 00 00 0F 84 ? ? ? ? F3 0F 10 1D",
+        // Always take approach-body path in Vision logic after the native probe.
+        ["Vision_AlwaysEnterApproachBody"] = (
+            signature:        "48 89 DF E8 ? ? ? ? 84 C0 0F 84 ? ? ? ? 48 8B 43 08 F3 0F 10 40 0C",
             patch:            "90 90 90 90 90 90",
             expectedOriginal: "0F 84 ? ? ? ?",
-            patchOffset:      23
+            patchOffset:      10
         ),
 
         // CCSBot::UpdateLookAround: skip the skill threshold before approach-body checks.
@@ -719,7 +720,6 @@ public class BotAI : BasePlugin
             patchOffset:      50
         )
     };
-
 
     public override void Load(bool hotReload)
     {
@@ -848,7 +848,7 @@ public class BotAI : BasePlugin
             if (pawn?.Bot?.Handle is not { } handle || handle == nint.Zero) return false;
             if (!IsValid(handle)) return false;
 
-            nint gsPtr = handle + BotOffsets.m_gameState;
+            nint gsPtr = handle + (_isLinux ? BotOffsets.m_gameStateLinux : BotOffsets.m_gameStateWindows);
             if (!IsValid(gsPtr)) return false;
             if (Marshal.ReadByte(gsPtr + BotOffsets.m_isRoundOver) != 0) return true;
 

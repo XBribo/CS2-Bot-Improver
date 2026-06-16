@@ -377,14 +377,9 @@ public class BotState : BasePlugin
             ref bool allowActive = ref bot.AllowActive;
             allowActive = true;
 
-            ref bool isRapidFiring = ref bot.IsRapidFiring;
-            isRapidFiring = true;
-
             ref float peripheralTimestamp = ref bot.PeripheralTimestamp;
             peripheralTimestamp = 0.0f;
 
-            ref float fireWeaponTimestamp = ref bot.FireWeaponTimestamp;
-            fireWeaponTimestamp = 0.0f;
             // Alert
             CountdownTimer alertTimer = bot.AlertTimer;
             ref float alertduration = ref alertTimer.Duration;
@@ -418,20 +413,6 @@ public class BotState : BasePlugin
 
             ref float panictimescale = ref panicTimer.Timescale;
             panictimescale = 1.0f;
-            // Always dodge
-            ref bool isEnemySniperVisible = ref bot.IsEnemySniperVisible;
-            isEnemySniperVisible = true;
-
-            CountdownTimer sawEnemySniperTimer = bot.SawEnemySniperTimer;
-
-            ref float sawEnemySniperduration = ref sawEnemySniperTimer.Duration;
-            sawEnemySniperduration = 600.0f;
-
-            ref float sawEnemySniperTimestamp = ref sawEnemySniperTimer.Timestamp;
-            sawEnemySniperTimestamp = now + sawEnemySniperduration;
-
-            ref float sawEnemySniperTimescale = ref sawEnemySniperTimer.Timescale;
-            sawEnemySniperTimescale = 1.0f;
             // Teammate Stuck Fix
             ref bool IsWaitingBehindFriend = ref bot.IsWaitingBehindFriend;
             IsWaitingBehindFriend = false;
@@ -446,6 +427,11 @@ public class BotState : BasePlugin
 
             ref float politeTimerTimescale = ref politeTimer.Timescale;
             politeTimerTimescale = 1.0f;
+
+            // Skip velocity/movement modifications for bots currently under ProOpeningReplay control.
+            // ProOpeningReplay writes InhibitLookAroundTimestamp = Server.CurrentTime + 0.2f each tick.
+            if (bot.InhibitLookAroundTimestamp > now + 0.1f)
+                continue;
 
             // Sniper Peek
             bool curIsAttacking = bot.IsAttacking;
@@ -477,12 +463,6 @@ public class BotState : BasePlugin
 
                 ref float inhibitLookAroundTimestamp = ref bot.InhibitLookAroundTimestamp;
                 inhibitLookAroundTimestamp = 0f;
-            }
-            //Test Alert! Can cause crash when bot_debug 1 !
-            ref bool isAimingAtEnemy = ref bot.IsAimingAtEnemy;
-            if (isAimingAtEnemy && !curIsAttacking)
-            {
-                bot.IsAttacking = true;
             }
             // Cancel Crouch After Attack
             if (_prevIsAttacking.TryGetValue(idx, out bool prevAttack))

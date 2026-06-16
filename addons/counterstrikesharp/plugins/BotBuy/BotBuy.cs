@@ -24,6 +24,7 @@ public sealed class BotBuyPatch : BasePlugin
     private Dictionary<int, List<string>> _prevWeapons = new();
     private Dictionary<int, int> _prevMoney = new();
     private Dictionary<int, int> _prevArmor = new();
+
 //----------------------------------------------------------------------------------------------
     [GameEventHandler]
     public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
@@ -210,6 +211,7 @@ public sealed class BotBuyPatch : BasePlugin
         {
             foreach (var p in allPlayers)
             {
+                if (!p.IsValid || !p.PawnIsAlive) continue;
                 var pawn = p.PlayerPawn.Value;
                 if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null) continue;
 
@@ -228,6 +230,7 @@ public sealed class BotBuyPatch : BasePlugin
         {
             foreach (var p in allPlayers)
             {
+                if (!p.IsValid || !p.PawnIsAlive) continue;
                 var pawn = p.PlayerPawn.Value;
                 if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null) continue;
 
@@ -255,6 +258,7 @@ public sealed class BotBuyPatch : BasePlugin
             if (ConVar.Find("sv_gravity")?.GetPrimitiveValue<float>() == 230f) return;
             foreach (var p in allPlayers)
             {
+                if (!p.IsValid || !p.PawnIsAlive) continue;
                 var pawn = p.PlayerPawn.Value;
                 if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null) continue;
 
@@ -292,8 +296,20 @@ public sealed class BotBuyPatch : BasePlugin
             {
                 foreach (var p in allPlayers)
                 {
-                    if (p.InGameMoneyServices == null || p.InGameMoneyServices.Account < 5200)
-                        continue;
+                    // Schema-pointer check: even though IsValid may be true and InGameMoneyServices is
+                    // not null, the property getter can throw ArgumentNullException ("Schema target
+                    // points to null") on a controller whose pawn isn't fully wired up yet (race during
+                    // round-start). Skip safely in that case.
+                    int money;
+                    try
+                    {
+                        if (!p.IsValid) continue;
+                        var ms = p.InGameMoneyServices;
+                        if (ms == null) continue;
+                        money = ms.Account;
+                    }
+                    catch (ArgumentNullException) { continue; }
+                    if (money < 5200) continue;
 
                     var pawn = p.PlayerPawn.Value;
                     if (pawn == null || !pawn.IsValid)
@@ -608,13 +624,23 @@ public sealed class BotBuyPatch : BasePlugin
         if (pawn.WeaponServices == null)
             return false;
 
-        var activeWeapon = pawn.WeaponServices.ActiveWeapon;
-        if (!activeWeapon.IsValid || activeWeapon.Value == null)
-            return false;
+        foreach (var wHandle in pawn.WeaponServices.MyWeapons)
+        {
+            var w = wHandle.Value;
+            if (w == null) continue;
 
-        var weaponName = activeWeapon.Value.DesignerName;
-        if (string.IsNullOrEmpty(weaponName)) return false;
+            var weaponName = w.DesignerName;
+            if (string.IsNullOrEmpty(weaponName)) continue;
 
+            if (IsPrimaryWeapon(weaponName))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsPrimaryWeapon(string weaponName)
+    {
         return weaponName.StartsWith("weapon_ak") ||
             weaponName.StartsWith("weapon_m4") ||
             weaponName.StartsWith("weapon_aug") ||
@@ -631,7 +657,10 @@ public sealed class BotBuyPatch : BasePlugin
             weaponName.StartsWith("weapon_sawedoff") ||
             weaponName.StartsWith("weapon_xm1014") ||
             weaponName.StartsWith("weapon_negev") ||
-            weaponName.StartsWith("weapon_m249");
+            weaponName.StartsWith("weapon_m249") ||
+            weaponName.StartsWith("weapon_scar") ||
+            weaponName.StartsWith("weapon_g3sg1") ||
+            weaponName.StartsWith("weapon_sg556");
     }
 
 //----------------------------------------------------------------------------------------------

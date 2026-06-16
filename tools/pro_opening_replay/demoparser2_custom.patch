@@ -1,0 +1,1733 @@
+diff --git a/src/csgoproto/src/maps.rs b/src/csgoproto/src/maps.rs
+index 809f41b..d9677ea 100644
+--- a/src/csgoproto/src/maps.rs
++++ b/src/csgoproto/src/maps.rs
+@@ -76,7 +76,7 @@ pub static PAINTKITS: phf::Map<u32, &'static str> = phf_map! {
+     112_u32 => "Hydro Strike",
+     113_u32 => "The Outsiders",
+     114_u32 => "Calligraffiti",
+-    115_u32 => "027",
++    115_u32 => "27",
+     116_u32 => "Sand Mesh",
+     117_u32 => "Trail Blazer",
+     118_u32 => "Turbine",
+@@ -1338,6 +1338,45 @@ pub static PAINTKITS: phf::Map<u32, &'static str> = phf_map! {
+     1393_u32 => "Byproduct",
+     1394_u32 => "Safari Print",
+     1397_u32 => "Aphrodite",
++    1398_u32 => "Wave Chaser",
++    1399_u32 => "Brocade Crane",
++    1400_u32 => "Brocade Flowers",
++    1401_u32 => "Dragon Fists",
++    1402_u32 => "Garden",
++    1404_u32 => "Seigaiha",
++    1405_u32 => "Violet Beadwork",
++    1406_u32 => "Frosty",
++    1407_u32 => "Blaze",
++    1408_u32 => "Creme Pinstripe",
++    1409_u32 => "Red Racer",
++    1410_u32 => "Ultra Violent",
++    1412_u32 => "Plum Quill",
++    1413_u32 => "Lime Polycam",
++    1414_u32 => "Blackbook",
++    1415_u32 => "Chocolate Chesterfield",
++    1416_u32 => "Sunburst",
++    1417_u32 => "Occult",
++    1418_u32 => "RMX",
++    1419_u32 => "Deathgaze",
++    1420_u32 => "Kintsugi",
++    1421_u32 => "Fully Tuned",
++    1422_u32 => "Queen's Gambit",
++    1423_u32 => "Urban Sovereign",
++    1425_u32 => "Crane Flight",
++    1426_u32 => "Fragment",
++    1427_u32 => "Fusion",
++    1429_u32 => "Dark Polymer",
++    1430_u32 => "Firebreathing",
++    1431_u32 => "Silent Shot",
++    1432_u32 => "Zubastick",
++    1433_u32 => "Electrum",
++    1434_u32 => "Galigator",
++    1435_u32 => "Bock Blocks",
++    1436_u32 => "Amberline",
++    1437_u32 => "Big Swell",
++    1438_u32 => "Pillow Punchers",
++    1439_u32 => "Hand Sweaters",
++    1440_u32 => "Cloud Chaser",
+     9001_u32 => "workshop_default",
+     10006_u32 => "Charred",
+     10007_u32 => "Snakebite",
+@@ -11849,6 +11888,811 @@ pub static STICKER_ID_TO_NAME: phf::Map<u32, &'static str> = phf_map! {
+     10311_u32 => "bud2025_signature_zywoo_32_embroidered",
+     10312_u32 => "bud2025_signature_zywoo_32_holo",
+     10313_u32 => "bud2025_signature_zywoo_32_gold",
++    10369_u32 => "cologne2026_team_vita",
++    10370_u32 => "cologne2026_team_vita_foil",
++    10371_u32 => "cologne2026_team_vita_holo",
++    10372_u32 => "cologne2026_team_vita_gold",
++    10373_u32 => "cologne2026_team_navi",
++    10374_u32 => "cologne2026_team_navi_foil",
++    10375_u32 => "cologne2026_team_navi_holo",
++    10376_u32 => "cologne2026_team_navi_gold",
++    10377_u32 => "cologne2026_team_fal",
++    10378_u32 => "cologne2026_team_fal_foil",
++    10379_u32 => "cologne2026_team_fal_holo",
++    10380_u32 => "cologne2026_team_fal_gold",
++    10381_u32 => "cologne2026_team_mngz",
++    10382_u32 => "cologne2026_team_mngz_foil",
++    10383_u32 => "cologne2026_team_mngz_holo",
++    10384_u32 => "cologne2026_team_mngz_gold",
++    10385_u32 => "cologne2026_team_pari",
++    10386_u32 => "cologne2026_team_pari_foil",
++    10387_u32 => "cologne2026_team_pari_holo",
++    10388_u32 => "cologne2026_team_pari_gold",
++    10389_u32 => "cologne2026_team_aura",
++    10390_u32 => "cologne2026_team_aura_foil",
++    10391_u32 => "cologne2026_team_aura_holo",
++    10392_u32 => "cologne2026_team_aura_gold",
++    10393_u32 => "cologne2026_team_furi",
++    10394_u32 => "cologne2026_team_furi_foil",
++    10395_u32 => "cologne2026_team_furi_holo",
++    10396_u32 => "cologne2026_team_furi_gold",
++    10397_u32 => "cologne2026_team_mouz",
++    10398_u32 => "cologne2026_team_mouz_foil",
++    10399_u32 => "cologne2026_team_mouz_holo",
++    10400_u32 => "cologne2026_team_mouz_gold",
++    10401_u32 => "cologne2026_team_fut",
++    10402_u32 => "cologne2026_team_fut_foil",
++    10403_u32 => "cologne2026_team_fut_holo",
++    10404_u32 => "cologne2026_team_fut_gold",
++    10405_u32 => "cologne2026_team_spir",
++    10406_u32 => "cologne2026_team_spir_foil",
++    10407_u32 => "cologne2026_team_spir_holo",
++    10408_u32 => "cologne2026_team_spir_gold",
++    10409_u32 => "cologne2026_team_astr",
++    10410_u32 => "cologne2026_team_astr_foil",
++    10411_u32 => "cologne2026_team_astr_holo",
++    10412_u32 => "cologne2026_team_astr_gold",
++    10413_u32 => "cologne2026_team_g2",
++    10414_u32 => "cologne2026_team_g2_foil",
++    10415_u32 => "cologne2026_team_g2_holo",
++    10416_u32 => "cologne2026_team_g2_gold",
++    10417_u32 => "cologne2026_team_lgcy",
++    10418_u32 => "cologne2026_team_lgcy_foil",
++    10419_u32 => "cologne2026_team_lgcy_holo",
++    10420_u32 => "cologne2026_team_lgcy_gold",
++    10421_u32 => "cologne2026_team_pain",
++    10422_u32 => "cologne2026_team_pain_foil",
++    10423_u32 => "cologne2026_team_pain_holo",
++    10424_u32 => "cologne2026_team_pain_gold",
++    10425_u32 => "cologne2026_team_mont",
++    10426_u32 => "cologne2026_team_mont_foil",
++    10427_u32 => "cologne2026_team_mont_holo",
++    10428_u32 => "cologne2026_team_mont_gold",
++    10429_u32 => "cologne2026_team_nine",
++    10430_u32 => "cologne2026_team_nine_foil",
++    10431_u32 => "cologne2026_team_nine_holo",
++    10432_u32 => "cologne2026_team_nine_gold",
++    10433_u32 => "cologne2026_team_gl",
++    10434_u32 => "cologne2026_team_gl_foil",
++    10435_u32 => "cologne2026_team_gl_holo",
++    10436_u32 => "cologne2026_team_gl_gold",
++    10437_u32 => "cologne2026_team_b8",
++    10438_u32 => "cologne2026_team_b8_foil",
++    10439_u32 => "cologne2026_team_b8_holo",
++    10440_u32 => "cologne2026_team_b8_gold",
++    10441_u32 => "cologne2026_team_hero",
++    10442_u32 => "cologne2026_team_hero_foil",
++    10443_u32 => "cologne2026_team_hero_holo",
++    10444_u32 => "cologne2026_team_hero_gold",
++    10445_u32 => "cologne2026_team_bb",
++    10446_u32 => "cologne2026_team_bb_foil",
++    10447_u32 => "cologne2026_team_bb_holo",
++    10448_u32 => "cologne2026_team_bb_gold",
++    10449_u32 => "cologne2026_team_big",
++    10450_u32 => "cologne2026_team_big_foil",
++    10451_u32 => "cologne2026_team_big_holo",
++    10452_u32 => "cologne2026_team_big_gold",
++    10453_u32 => "cologne2026_team_m80",
++    10454_u32 => "cologne2026_team_m80_foil",
++    10455_u32 => "cologne2026_team_m80_holo",
++    10456_u32 => "cologne2026_team_m80_gold",
++    10457_u32 => "cologne2026_team_mibr",
++    10458_u32 => "cologne2026_team_mibr_foil",
++    10459_u32 => "cologne2026_team_mibr_holo",
++    10460_u32 => "cologne2026_team_mibr_gold",
++    10461_u32 => "cologne2026_team_sinn",
++    10462_u32 => "cologne2026_team_sinn_foil",
++    10463_u32 => "cologne2026_team_sinn_holo",
++    10464_u32 => "cologne2026_team_sinn_gold",
++    10465_u32 => "cologne2026_team_nrg",
++    10466_u32 => "cologne2026_team_nrg_foil",
++    10467_u32 => "cologne2026_team_nrg_holo",
++    10468_u32 => "cologne2026_team_nrg_gold",
++    10469_u32 => "cologne2026_team_tyl",
++    10470_u32 => "cologne2026_team_tyl_foil",
++    10471_u32 => "cologne2026_team_tyl_holo",
++    10472_u32 => "cologne2026_team_tyl_gold",
++    10473_u32 => "cologne2026_team_shrk",
++    10474_u32 => "cologne2026_team_shrk_foil",
++    10475_u32 => "cologne2026_team_shrk_holo",
++    10476_u32 => "cologne2026_team_shrk_gold",
++    10477_u32 => "cologne2026_team_gaim",
++    10478_u32 => "cologne2026_team_gaim_foil",
++    10479_u32 => "cologne2026_team_gaim_holo",
++    10480_u32 => "cologne2026_team_gaim_gold",
++    10481_u32 => "cologne2026_team_liq",
++    10482_u32 => "cologne2026_team_liq_foil",
++    10483_u32 => "cologne2026_team_liq_holo",
++    10484_u32 => "cologne2026_team_liq_gold",
++    10485_u32 => "cologne2026_team_lynn",
++    10486_u32 => "cologne2026_team_lynn_foil",
++    10487_u32 => "cologne2026_team_lynn_holo",
++    10488_u32 => "cologne2026_team_lynn_gold",
++    10489_u32 => "cologne2026_team_thun",
++    10490_u32 => "cologne2026_team_thun_foil",
++    10491_u32 => "cologne2026_team_thun_holo",
++    10492_u32 => "cologne2026_team_thun_gold",
++    10493_u32 => "cologne2026_team_fq",
++    10494_u32 => "cologne2026_team_fq_foil",
++    10495_u32 => "cologne2026_team_fq_holo",
++    10496_u32 => "cologne2026_team_fq_gold",
++    10497_u32 => "cologne2026_team_iem",
++    10498_u32 => "cologne2026_team_iem_foil",
++    10499_u32 => "cologne2026_team_iem_holo",
++    10500_u32 => "cologne2026_team_iem_gold",
++    10501_u32 => "cologne2026_team_vita_graffiti",
++    10502_u32 => "cologne2026_team_navi_graffiti",
++    10503_u32 => "cologne2026_team_fal_graffiti",
++    10504_u32 => "cologne2026_team_mngz_graffiti",
++    10505_u32 => "cologne2026_team_pari_graffiti",
++    10506_u32 => "cologne2026_team_aura_graffiti",
++    10507_u32 => "cologne2026_team_furi_graffiti",
++    10508_u32 => "cologne2026_team_mouz_graffiti",
++    10509_u32 => "cologne2026_team_fut_graffiti",
++    10510_u32 => "cologne2026_team_spir_graffiti",
++    10511_u32 => "cologne2026_team_astr_graffiti",
++    10512_u32 => "cologne2026_team_g2_graffiti",
++    10513_u32 => "cologne2026_team_lgcy_graffiti",
++    10514_u32 => "cologne2026_team_pain_graffiti",
++    10515_u32 => "cologne2026_team_mont_graffiti",
++    10516_u32 => "cologne2026_team_nine_graffiti",
++    10517_u32 => "cologne2026_team_gl_graffiti",
++    10518_u32 => "cologne2026_team_b8_graffiti",
++    10519_u32 => "cologne2026_team_hero_graffiti",
++    10520_u32 => "cologne2026_team_bb_graffiti",
++    10521_u32 => "cologne2026_team_big_graffiti",
++    10522_u32 => "cologne2026_team_m80_graffiti",
++    10523_u32 => "cologne2026_team_mibr_graffiti",
++    10524_u32 => "cologne2026_team_sinn_graffiti",
++    10525_u32 => "cologne2026_team_nrg_graffiti",
++    10526_u32 => "cologne2026_team_tyl_graffiti",
++    10527_u32 => "cologne2026_team_shrk_graffiti",
++    10528_u32 => "cologne2026_team_gaim_graffiti",
++    10529_u32 => "cologne2026_team_liq_graffiti",
++    10530_u32 => "cologne2026_team_lynn_graffiti",
++    10531_u32 => "cologne2026_team_thun_graffiti",
++    10532_u32 => "cologne2026_team_fq_graffiti",
++    10533_u32 => "cologne2026_team_iem_graffiti",
++    10534_u32 => "cologne2026_signature_zywoo",
++    10535_u32 => "cologne2026_signature_zywoo_foil",
++    10536_u32 => "cologne2026_signature_zywoo_holo",
++    10537_u32 => "cologne2026_signature_zywoo_gold",
++    10538_u32 => "cologne2026_signature_apex",
++    10539_u32 => "cologne2026_signature_apex_foil",
++    10540_u32 => "cologne2026_signature_apex_holo",
++    10541_u32 => "cologne2026_signature_apex_gold",
++    10542_u32 => "cologne2026_signature_mezii",
++    10543_u32 => "cologne2026_signature_mezii_foil",
++    10544_u32 => "cologne2026_signature_mezii_holo",
++    10545_u32 => "cologne2026_signature_mezii_gold",
++    10546_u32 => "cologne2026_signature_flamez",
++    10547_u32 => "cologne2026_signature_flamez_foil",
++    10548_u32 => "cologne2026_signature_flamez_holo",
++    10549_u32 => "cologne2026_signature_flamez_gold",
++    10550_u32 => "cologne2026_signature_ropz",
++    10551_u32 => "cologne2026_signature_ropz_foil",
++    10552_u32 => "cologne2026_signature_ropz_holo",
++    10553_u32 => "cologne2026_signature_ropz_gold",
++    10554_u32 => "cologne2026_signature_w0nderful",
++    10555_u32 => "cologne2026_signature_w0nderful_foil",
++    10556_u32 => "cologne2026_signature_w0nderful_holo",
++    10557_u32 => "cologne2026_signature_w0nderful_gold",
++    10558_u32 => "cologne2026_signature_aleksib",
++    10559_u32 => "cologne2026_signature_aleksib_foil",
++    10560_u32 => "cologne2026_signature_aleksib_holo",
++    10561_u32 => "cologne2026_signature_aleksib_gold",
++    10562_u32 => "cologne2026_signature_b1t",
++    10563_u32 => "cologne2026_signature_b1t_foil",
++    10564_u32 => "cologne2026_signature_b1t_holo",
++    10565_u32 => "cologne2026_signature_b1t_gold",
++    10566_u32 => "cologne2026_signature_im",
++    10567_u32 => "cologne2026_signature_im_foil",
++    10568_u32 => "cologne2026_signature_im_holo",
++    10569_u32 => "cologne2026_signature_im_gold",
++    10570_u32 => "cologne2026_signature_makazze",
++    10571_u32 => "cologne2026_signature_makazze_foil",
++    10572_u32 => "cologne2026_signature_makazze_holo",
++    10573_u32 => "cologne2026_signature_makazze_gold",
++    10574_u32 => "cologne2026_signature_niko",
++    10575_u32 => "cologne2026_signature_niko_foil",
++    10576_u32 => "cologne2026_signature_niko_holo",
++    10577_u32 => "cologne2026_signature_niko_gold",
++    10578_u32 => "cologne2026_signature_kyxsan",
++    10579_u32 => "cologne2026_signature_kyxsan_foil",
++    10580_u32 => "cologne2026_signature_kyxsan_holo",
++    10581_u32 => "cologne2026_signature_kyxsan_gold",
++    10582_u32 => "cologne2026_signature_m0nesy",
++    10583_u32 => "cologne2026_signature_m0nesy_foil",
++    10584_u32 => "cologne2026_signature_m0nesy_holo",
++    10585_u32 => "cologne2026_signature_m0nesy_gold",
++    10586_u32 => "cologne2026_signature_teses",
++    10587_u32 => "cologne2026_signature_teses_foil",
++    10588_u32 => "cologne2026_signature_teses_holo",
++    10589_u32 => "cologne2026_signature_teses_gold",
++    10590_u32 => "cologne2026_signature_kyousuke",
++    10591_u32 => "cologne2026_signature_kyousuke_foil",
++    10592_u32 => "cologne2026_signature_kyousuke_holo",
++    10593_u32 => "cologne2026_signature_kyousuke_gold",
++    10594_u32 => "cologne2026_signature_blitz",
++    10595_u32 => "cologne2026_signature_blitz_foil",
++    10596_u32 => "cologne2026_signature_blitz_holo",
++    10597_u32 => "cologne2026_signature_blitz_gold",
++    10598_u32 => "cologne2026_signature_techno4k",
++    10599_u32 => "cologne2026_signature_techno4k_foil",
++    10600_u32 => "cologne2026_signature_techno4k_holo",
++    10601_u32 => "cologne2026_signature_techno4k_gold",
++    10602_u32 => "cologne2026_signature_cobra",
++    10603_u32 => "cologne2026_signature_cobra_foil",
++    10604_u32 => "cologne2026_signature_cobra_holo",
++    10605_u32 => "cologne2026_signature_cobra_gold",
++    10606_u32 => "cologne2026_signature_mzinho",
++    10607_u32 => "cologne2026_signature_mzinho_foil",
++    10608_u32 => "cologne2026_signature_mzinho_holo",
++    10609_u32 => "cologne2026_signature_mzinho_gold",
++    10610_u32 => "cologne2026_signature_910",
++    10611_u32 => "cologne2026_signature_910_foil",
++    10612_u32 => "cologne2026_signature_910_holo",
++    10613_u32 => "cologne2026_signature_910_gold",
++    10614_u32 => "cologne2026_signature_jame",
++    10615_u32 => "cologne2026_signature_jame_foil",
++    10616_u32 => "cologne2026_signature_jame_holo",
++    10617_u32 => "cologne2026_signature_jame_gold",
++    10618_u32 => "cologne2026_signature_nota",
++    10619_u32 => "cologne2026_signature_nota_foil",
++    10620_u32 => "cologne2026_signature_nota_holo",
++    10621_u32 => "cologne2026_signature_nota_gold",
++    10622_u32 => "cologne2026_signature_xielo",
++    10623_u32 => "cologne2026_signature_xielo_foil",
++    10624_u32 => "cologne2026_signature_xielo_holo",
++    10625_u32 => "cologne2026_signature_xielo_gold",
++    10626_u32 => "cologne2026_signature_belchonokk",
++    10627_u32 => "cologne2026_signature_belchonokk_foil",
++    10628_u32 => "cologne2026_signature_belchonokk_holo",
++    10629_u32 => "cologne2026_signature_belchonokk_gold",
++    10630_u32 => "cologne2026_signature_zweih",
++    10631_u32 => "cologne2026_signature_zweih_foil",
++    10632_u32 => "cologne2026_signature_zweih_holo",
++    10633_u32 => "cologne2026_signature_zweih_gold",
++    10634_u32 => "cologne2026_signature_xantares",
++    10635_u32 => "cologne2026_signature_xantares_foil",
++    10636_u32 => "cologne2026_signature_xantares_holo",
++    10637_u32 => "cologne2026_signature_xantares_gold",
++    10638_u32 => "cologne2026_signature_soulfly",
++    10639_u32 => "cologne2026_signature_soulfly_foil",
++    10640_u32 => "cologne2026_signature_soulfly_holo",
++    10641_u32 => "cologne2026_signature_soulfly_gold",
++    10642_u32 => "cologne2026_signature_wicadia",
++    10643_u32 => "cologne2026_signature_wicadia_foil",
++    10644_u32 => "cologne2026_signature_wicadia_holo",
++    10645_u32 => "cologne2026_signature_wicadia_gold",
++    10646_u32 => "cologne2026_signature_maj3r",
++    10647_u32 => "cologne2026_signature_maj3r_foil",
++    10648_u32 => "cologne2026_signature_maj3r_holo",
++    10649_u32 => "cologne2026_signature_maj3r_gold",
++    10650_u32 => "cologne2026_signature_woxic",
++    10651_u32 => "cologne2026_signature_woxic_foil",
++    10652_u32 => "cologne2026_signature_woxic_holo",
++    10653_u32 => "cologne2026_signature_woxic_gold",
++    10654_u32 => "cologne2026_signature_yekindar",
++    10655_u32 => "cologne2026_signature_yekindar_foil",
++    10656_u32 => "cologne2026_signature_yekindar_holo",
++    10657_u32 => "cologne2026_signature_yekindar_gold",
++    10658_u32 => "cologne2026_signature_kscerato",
++    10659_u32 => "cologne2026_signature_kscerato_foil",
++    10660_u32 => "cologne2026_signature_kscerato_holo",
++    10661_u32 => "cologne2026_signature_kscerato_gold",
++    10662_u32 => "cologne2026_signature_fallen",
++    10663_u32 => "cologne2026_signature_fallen_foil",
++    10664_u32 => "cologne2026_signature_fallen_holo",
++    10665_u32 => "cologne2026_signature_fallen_gold",
++    10666_u32 => "cologne2026_signature_molodoy",
++    10667_u32 => "cologne2026_signature_molodoy_foil",
++    10668_u32 => "cologne2026_signature_molodoy_holo",
++    10669_u32 => "cologne2026_signature_molodoy_gold",
++    10670_u32 => "cologne2026_signature_yuurih",
++    10671_u32 => "cologne2026_signature_yuurih_foil",
++    10672_u32 => "cologne2026_signature_yuurih_holo",
++    10673_u32 => "cologne2026_signature_yuurih_gold",
++    10674_u32 => "cologne2026_signature_jimpphat",
++    10675_u32 => "cologne2026_signature_jimpphat_foil",
++    10676_u32 => "cologne2026_signature_jimpphat_holo",
++    10677_u32 => "cologne2026_signature_jimpphat_gold",
++    10678_u32 => "cologne2026_signature_brollan",
++    10679_u32 => "cologne2026_signature_brollan_foil",
++    10680_u32 => "cologne2026_signature_brollan_holo",
++    10681_u32 => "cologne2026_signature_brollan_gold",
++    10682_u32 => "cologne2026_signature_spinx",
++    10683_u32 => "cologne2026_signature_spinx_foil",
++    10684_u32 => "cologne2026_signature_spinx_holo",
++    10685_u32 => "cologne2026_signature_spinx_gold",
++    10686_u32 => "cologne2026_signature_torzsi",
++    10687_u32 => "cologne2026_signature_torzsi_foil",
++    10688_u32 => "cologne2026_signature_torzsi_holo",
++    10689_u32 => "cologne2026_signature_torzsi_gold",
++    10690_u32 => "cologne2026_signature_xertion",
++    10691_u32 => "cologne2026_signature_xertion_foil",
++    10692_u32 => "cologne2026_signature_xertion_holo",
++    10693_u32 => "cologne2026_signature_xertion_gold",
++    10694_u32 => "cologne2026_signature_dem0n",
++    10695_u32 => "cologne2026_signature_dem0n_foil",
++    10696_u32 => "cologne2026_signature_dem0n_holo",
++    10697_u32 => "cologne2026_signature_dem0n_gold",
++    10698_u32 => "cologne2026_signature_launx",
++    10699_u32 => "cologne2026_signature_launx_foil",
++    10700_u32 => "cologne2026_signature_launx_holo",
++    10701_u32 => "cologne2026_signature_launx_gold",
++    10702_u32 => "cologne2026_signature_krabeni",
++    10703_u32 => "cologne2026_signature_krabeni_foil",
++    10704_u32 => "cologne2026_signature_krabeni_holo",
++    10705_u32 => "cologne2026_signature_krabeni_gold",
++    10706_u32 => "cologne2026_signature_cmtry",
++    10707_u32 => "cologne2026_signature_cmtry_foil",
++    10708_u32 => "cologne2026_signature_cmtry_holo",
++    10709_u32 => "cologne2026_signature_cmtry_gold",
++    10710_u32 => "cologne2026_signature_dziugss",
++    10711_u32 => "cologne2026_signature_dziugss_foil",
++    10712_u32 => "cologne2026_signature_dziugss_holo",
++    10713_u32 => "cologne2026_signature_dziugss_gold",
++    10714_u32 => "cologne2026_signature_tn1r",
++    10715_u32 => "cologne2026_signature_tn1r_foil",
++    10716_u32 => "cologne2026_signature_tn1r_holo",
++    10717_u32 => "cologne2026_signature_tn1r_gold",
++    10718_u32 => "cologne2026_signature_donk",
++    10719_u32 => "cologne2026_signature_donk_foil",
++    10720_u32 => "cologne2026_signature_donk_holo",
++    10721_u32 => "cologne2026_signature_donk_gold",
++    10722_u32 => "cologne2026_signature_magixx",
++    10723_u32 => "cologne2026_signature_magixx_foil",
++    10724_u32 => "cologne2026_signature_magixx_holo",
++    10725_u32 => "cologne2026_signature_magixx_gold",
++    10726_u32 => "cologne2026_signature_sh1ro",
++    10727_u32 => "cologne2026_signature_sh1ro_foil",
++    10728_u32 => "cologne2026_signature_sh1ro_holo",
++    10729_u32 => "cologne2026_signature_sh1ro_gold",
++    10730_u32 => "cologne2026_signature_zont1x",
++    10731_u32 => "cologne2026_signature_zont1x_foil",
++    10732_u32 => "cologne2026_signature_zont1x_holo",
++    10733_u32 => "cologne2026_signature_zont1x_gold",
++    10734_u32 => "cologne2026_signature_hooxi",
++    10735_u32 => "cologne2026_signature_hooxi_foil",
++    10736_u32 => "cologne2026_signature_hooxi_holo",
++    10737_u32 => "cologne2026_signature_hooxi_gold",
++    10738_u32 => "cologne2026_signature_phzy",
++    10739_u32 => "cologne2026_signature_phzy_foil",
++    10740_u32 => "cologne2026_signature_phzy_holo",
++    10741_u32 => "cologne2026_signature_phzy_gold",
++    10742_u32 => "cologne2026_signature_ryu",
++    10743_u32 => "cologne2026_signature_ryu_foil",
++    10744_u32 => "cologne2026_signature_ryu_holo",
++    10745_u32 => "cologne2026_signature_ryu_gold",
++    10746_u32 => "cologne2026_signature_jabbi",
++    10747_u32 => "cologne2026_signature_jabbi_foil",
++    10748_u32 => "cologne2026_signature_jabbi_holo",
++    10749_u32 => "cologne2026_signature_jabbi_gold",
++    10750_u32 => "cologne2026_signature_staehr",
++    10751_u32 => "cologne2026_signature_staehr_foil",
++    10752_u32 => "cologne2026_signature_staehr_holo",
++    10753_u32 => "cologne2026_signature_staehr_gold",
++    10754_u32 => "cologne2026_signature_hunter",
++    10755_u32 => "cologne2026_signature_hunter_foil",
++    10756_u32 => "cologne2026_signature_hunter_holo",
++    10757_u32 => "cologne2026_signature_hunter_gold",
++    10758_u32 => "cologne2026_signature_heavygod",
++    10759_u32 => "cologne2026_signature_heavygod_foil",
++    10760_u32 => "cologne2026_signature_heavygod_holo",
++    10761_u32 => "cologne2026_signature_heavygod_gold",
++    10762_u32 => "cologne2026_signature_nertz",
++    10763_u32 => "cologne2026_signature_nertz_foil",
++    10764_u32 => "cologne2026_signature_nertz_holo",
++    10765_u32 => "cologne2026_signature_nertz_gold",
++    10766_u32 => "cologne2026_signature_sunpayus",
++    10767_u32 => "cologne2026_signature_sunpayus_foil",
++    10768_u32 => "cologne2026_signature_sunpayus_holo",
++    10769_u32 => "cologne2026_signature_sunpayus_gold",
++    10770_u32 => "cologne2026_signature_matys",
++    10771_u32 => "cologne2026_signature_matys_foil",
++    10772_u32 => "cologne2026_signature_matys_holo",
++    10773_u32 => "cologne2026_signature_matys_gold",
++    10774_u32 => "cologne2026_signature_art",
++    10775_u32 => "cologne2026_signature_art_foil",
++    10776_u32 => "cologne2026_signature_art_holo",
++    10777_u32 => "cologne2026_signature_art_gold",
++    10778_u32 => "cologne2026_signature_latto",
++    10779_u32 => "cologne2026_signature_latto_foil",
++    10780_u32 => "cologne2026_signature_latto_holo",
++    10781_u32 => "cologne2026_signature_latto_gold",
++    10782_u32 => "cologne2026_signature_dumau",
++    10783_u32 => "cologne2026_signature_dumau_foil",
++    10784_u32 => "cologne2026_signature_dumau_holo",
++    10785_u32 => "cologne2026_signature_dumau_gold",
++    10786_u32 => "cologne2026_signature_saadzin",
++    10787_u32 => "cologne2026_signature_saadzin_foil",
++    10788_u32 => "cologne2026_signature_saadzin_holo",
++    10789_u32 => "cologne2026_signature_saadzin_gold",
++    10790_u32 => "cologne2026_signature_n1ssim",
++    10791_u32 => "cologne2026_signature_n1ssim_foil",
++    10792_u32 => "cologne2026_signature_n1ssim_holo",
++    10793_u32 => "cologne2026_signature_n1ssim_gold",
++    10794_u32 => "cologne2026_signature_biguzera",
++    10795_u32 => "cologne2026_signature_biguzera_foil",
++    10796_u32 => "cologne2026_signature_biguzera_holo",
++    10797_u32 => "cologne2026_signature_biguzera_gold",
++    10798_u32 => "cologne2026_signature_nqz",
++    10799_u32 => "cologne2026_signature_nqz_foil",
++    10800_u32 => "cologne2026_signature_nqz_holo",
++    10801_u32 => "cologne2026_signature_nqz_gold",
++    10802_u32 => "cologne2026_signature_snow",
++    10803_u32 => "cologne2026_signature_snow_foil",
++    10804_u32 => "cologne2026_signature_snow_holo",
++    10805_u32 => "cologne2026_signature_snow_gold",
++    10806_u32 => "cologne2026_signature_piriajr",
++    10807_u32 => "cologne2026_signature_piriajr_foil",
++    10808_u32 => "cologne2026_signature_piriajr_holo",
++    10809_u32 => "cologne2026_signature_piriajr_gold",
++    10810_u32 => "cologne2026_signature_vsm",
++    10811_u32 => "cologne2026_signature_vsm_foil",
++    10812_u32 => "cologne2026_signature_vsm_holo",
++    10813_u32 => "cologne2026_signature_vsm_gold",
++    10814_u32 => "cologne2026_signature_rainwaker",
++    10815_u32 => "cologne2026_signature_rainwaker_foil",
++    10816_u32 => "cologne2026_signature_rainwaker_holo",
++    10817_u32 => "cologne2026_signature_rainwaker_gold",
++    10818_u32 => "cologne2026_signature_bymas",
++    10819_u32 => "cologne2026_signature_bymas_foil",
++    10820_u32 => "cologne2026_signature_bymas_holo",
++    10821_u32 => "cologne2026_signature_bymas_gold",
++    10822_u32 => "cologne2026_signature_afro",
++    10823_u32 => "cologne2026_signature_afro_foil",
++    10824_u32 => "cologne2026_signature_afro_holo",
++    10825_u32 => "cologne2026_signature_afro_gold",
++    10826_u32 => "cologne2026_signature_gizmy",
++    10827_u32 => "cologne2026_signature_gizmy_foil",
++    10828_u32 => "cologne2026_signature_gizmy_holo",
++    10829_u32 => "cologne2026_signature_gizmy_gold",
++    10830_u32 => "cologne2026_signature_azuwu",
++    10831_u32 => "cologne2026_signature_azuwu_foil",
++    10832_u32 => "cologne2026_signature_azuwu_holo",
++    10833_u32 => "cologne2026_signature_azuwu_gold",
++    10834_u32 => "cologne2026_signature_max",
++    10835_u32 => "cologne2026_signature_max_foil",
++    10836_u32 => "cologne2026_signature_max_holo",
++    10837_u32 => "cologne2026_signature_max_gold",
++    10838_u32 => "cologne2026_signature_dgt",
++    10839_u32 => "cologne2026_signature_dgt_foil",
++    10840_u32 => "cologne2026_signature_dgt_holo",
++    10841_u32 => "cologne2026_signature_dgt_gold",
++    10842_u32 => "cologne2026_signature_meyern",
++    10843_u32 => "cologne2026_signature_meyern_foil",
++    10844_u32 => "cologne2026_signature_meyern_holo",
++    10845_u32 => "cologne2026_signature_meyern_gold",
++    10846_u32 => "cologne2026_signature_luchov",
++    10847_u32 => "cologne2026_signature_luchov_foil",
++    10848_u32 => "cologne2026_signature_luchov_holo",
++    10849_u32 => "cologne2026_signature_luchov_gold",
++    10850_u32 => "cologne2026_signature_huasopeek",
++    10851_u32 => "cologne2026_signature_huasopeek_foil",
++    10852_u32 => "cologne2026_signature_huasopeek_holo",
++    10853_u32 => "cologne2026_signature_huasopeek_gold",
++    10854_u32 => "cologne2026_signature_snax",
++    10855_u32 => "cologne2026_signature_snax_foil",
++    10856_u32 => "cologne2026_signature_snax_holo",
++    10857_u32 => "cologne2026_signature_snax_gold",
++    10858_u32 => "cologne2026_signature_rez",
++    10859_u32 => "cologne2026_signature_rez_foil",
++    10860_u32 => "cologne2026_signature_rez_holo",
++    10861_u32 => "cologne2026_signature_rez_gold",
++    10862_u32 => "cologne2026_signature_tauson",
++    10863_u32 => "cologne2026_signature_tauson_foil",
++    10864_u32 => "cologne2026_signature_tauson_holo",
++    10865_u32 => "cologne2026_signature_tauson_gold",
++    10866_u32 => "cologne2026_signature_pr",
++    10867_u32 => "cologne2026_signature_pr_foil",
++    10868_u32 => "cologne2026_signature_pr_holo",
++    10869_u32 => "cologne2026_signature_pr_gold",
++    10870_u32 => "cologne2026_signature_hypex",
++    10871_u32 => "cologne2026_signature_hypex_foil",
++    10872_u32 => "cologne2026_signature_hypex_holo",
++    10873_u32 => "cologne2026_signature_hypex_gold",
++    10874_u32 => "cologne2026_signature_s1zzi",
++    10875_u32 => "cologne2026_signature_s1zzi_foil",
++    10876_u32 => "cologne2026_signature_s1zzi_holo",
++    10877_u32 => "cologne2026_signature_s1zzi_gold",
++    10878_u32 => "cologne2026_signature_npl",
++    10879_u32 => "cologne2026_signature_npl_foil",
++    10880_u32 => "cologne2026_signature_npl_holo",
++    10881_u32 => "cologne2026_signature_npl_gold",
++    10882_u32 => "cologne2026_signature_esenthial",
++    10883_u32 => "cologne2026_signature_esenthial_foil",
++    10884_u32 => "cologne2026_signature_esenthial_holo",
++    10885_u32 => "cologne2026_signature_esenthial_gold",
++    10886_u32 => "cologne2026_signature_alex666",
++    10887_u32 => "cologne2026_signature_alex666_foil",
++    10888_u32 => "cologne2026_signature_alex666_holo",
++    10889_u32 => "cologne2026_signature_alex666_gold",
++    10890_u32 => "cologne2026_signature_kensizor",
++    10891_u32 => "cologne2026_signature_kensizor_foil",
++    10892_u32 => "cologne2026_signature_kensizor_holo",
++    10893_u32 => "cologne2026_signature_kensizor_gold",
++    10894_u32 => "cologne2026_signature_xfl0ud",
++    10895_u32 => "cologne2026_signature_xfl0ud_foil",
++    10896_u32 => "cologne2026_signature_xfl0ud_holo",
++    10897_u32 => "cologne2026_signature_xfl0ud_gold",
++    10898_u32 => "cologne2026_signature_nilo",
++    10899_u32 => "cologne2026_signature_nilo_foil",
++    10900_u32 => "cologne2026_signature_nilo_holo",
++    10901_u32 => "cologne2026_signature_nilo_gold",
++    10902_u32 => "cologne2026_signature_susp",
++    10903_u32 => "cologne2026_signature_susp_foil",
++    10904_u32 => "cologne2026_signature_susp_holo",
++    10905_u32 => "cologne2026_signature_susp_gold",
++    10906_u32 => "cologne2026_signature_chr1zn",
++    10907_u32 => "cologne2026_signature_chr1zn_foil",
++    10908_u32 => "cologne2026_signature_chr1zn_holo",
++    10909_u32 => "cologne2026_signature_chr1zn_gold",
++    10910_u32 => "cologne2026_signature_yxngstxr",
++    10911_u32 => "cologne2026_signature_yxngstxr_foil",
++    10912_u32 => "cologne2026_signature_yxngstxr_holo",
++    10913_u32 => "cologne2026_signature_yxngstxr_gold",
++    10914_u32 => "cologne2026_signature_boombl4",
++    10915_u32 => "cologne2026_signature_boombl4_foil",
++    10916_u32 => "cologne2026_signature_boombl4_holo",
++    10917_u32 => "cologne2026_signature_boombl4_gold",
++    10918_u32 => "cologne2026_signature_zorte",
++    10919_u32 => "cologne2026_signature_zorte_foil",
++    10920_u32 => "cologne2026_signature_zorte_holo",
++    10921_u32 => "cologne2026_signature_zorte_gold",
++    10922_u32 => "cologne2026_signature_s1ren",
++    10923_u32 => "cologne2026_signature_s1ren_foil",
++    10924_u32 => "cologne2026_signature_s1ren_holo",
++    10925_u32 => "cologne2026_signature_s1ren_gold",
++    10926_u32 => "cologne2026_signature_fl4mus",
++    10927_u32 => "cologne2026_signature_fl4mus_foil",
++    10928_u32 => "cologne2026_signature_fl4mus_holo",
++    10929_u32 => "cologne2026_signature_fl4mus_gold",
++    10930_u32 => "cologne2026_signature_magnojez",
++    10931_u32 => "cologne2026_signature_magnojez_foil",
++    10932_u32 => "cologne2026_signature_magnojez_holo",
++    10933_u32 => "cologne2026_signature_magnojez_gold",
++    10934_u32 => "cologne2026_signature_tabsen",
++    10935_u32 => "cologne2026_signature_tabsen_foil",
++    10936_u32 => "cologne2026_signature_tabsen_holo",
++    10937_u32 => "cologne2026_signature_tabsen_gold",
++    10938_u32 => "cologne2026_signature_jdc",
++    10939_u32 => "cologne2026_signature_jdc_foil",
++    10940_u32 => "cologne2026_signature_jdc_holo",
++    10941_u32 => "cologne2026_signature_jdc_gold",
++    10942_u32 => "cologne2026_signature_faven",
++    10943_u32 => "cologne2026_signature_faven_foil",
++    10944_u32 => "cologne2026_signature_faven_holo",
++    10945_u32 => "cologne2026_signature_faven_gold",
++    10946_u32 => "cologne2026_signature_blamef",
++    10947_u32 => "cologne2026_signature_blamef_foil",
++    10948_u32 => "cologne2026_signature_blamef_holo",
++    10949_u32 => "cologne2026_signature_blamef_gold",
++    10950_u32 => "cologne2026_signature_gr1ks",
++    10951_u32 => "cologne2026_signature_gr1ks_foil",
++    10952_u32 => "cologne2026_signature_gr1ks_holo",
++    10953_u32 => "cologne2026_signature_gr1ks_gold",
++    10954_u32 => "cologne2026_signature_swisher",
++    10955_u32 => "cologne2026_signature_swisher_foil",
++    10956_u32 => "cologne2026_signature_swisher_holo",
++    10957_u32 => "cologne2026_signature_swisher_gold",
++    10958_u32 => "cologne2026_signature_lake",
++    10959_u32 => "cologne2026_signature_lake_foil",
++    10960_u32 => "cologne2026_signature_lake_holo",
++    10961_u32 => "cologne2026_signature_lake_gold",
++    10962_u32 => "cologne2026_signature_jba",
++    10963_u32 => "cologne2026_signature_jba_foil",
++    10964_u32 => "cologne2026_signature_jba_holo",
++    10965_u32 => "cologne2026_signature_jba_gold",
++    10966_u32 => "cologne2026_signature_s1n",
++    10967_u32 => "cologne2026_signature_s1n_foil",
++    10968_u32 => "cologne2026_signature_s1n_holo",
++    10969_u32 => "cologne2026_signature_s1n_gold",
++    10970_u32 => "cologne2026_signature_slaxz",
++    10971_u32 => "cologne2026_signature_slaxz_foil",
++    10972_u32 => "cologne2026_signature_slaxz_holo",
++    10973_u32 => "cologne2026_signature_slaxz_gold",
++    10974_u32 => "cologne2026_signature_lnz",
++    10975_u32 => "cologne2026_signature_lnz_foil",
++    10976_u32 => "cologne2026_signature_lnz_holo",
++    10977_u32 => "cologne2026_signature_lnz_gold",
++    10978_u32 => "cologne2026_signature_insani",
++    10979_u32 => "cologne2026_signature_insani_foil",
++    10980_u32 => "cologne2026_signature_insani_holo",
++    10981_u32 => "cologne2026_signature_insani_gold",
++    10982_u32 => "cologne2026_signature_brnz4n",
++    10983_u32 => "cologne2026_signature_brnz4n_foil",
++    10984_u32 => "cologne2026_signature_brnz4n_holo",
++    10985_u32 => "cologne2026_signature_brnz4n_gold",
++    10986_u32 => "cologne2026_signature_venomzera",
++    10987_u32 => "cologne2026_signature_venomzera_foil",
++    10988_u32 => "cologne2026_signature_venomzera_holo",
++    10989_u32 => "cologne2026_signature_venomzera_gold",
++    10990_u32 => "cologne2026_signature_kl1m",
++    10991_u32 => "cologne2026_signature_kl1m_foil",
++    10992_u32 => "cologne2026_signature_kl1m_holo",
++    10993_u32 => "cologne2026_signature_kl1m_gold",
++    10994_u32 => "cologne2026_signature_beastik",
++    10995_u32 => "cologne2026_signature_beastik_foil",
++    10996_u32 => "cologne2026_signature_beastik_holo",
++    10997_u32 => "cologne2026_signature_beastik_gold",
++    10998_u32 => "cologne2026_signature_shock",
++    10999_u32 => "cologne2026_signature_shock_foil",
++    11000_u32 => "cologne2026_signature_shock_holo",
++    11001_u32 => "cologne2026_signature_shock_gold",
++    11002_u32 => "cologne2026_signature_modo",
++    11003_u32 => "cologne2026_signature_modo_foil",
++    11004_u32 => "cologne2026_signature_modo_holo",
++    11005_u32 => "cologne2026_signature_modo_gold",
++    11006_u32 => "cologne2026_signature_kisserek",
++    11007_u32 => "cologne2026_signature_kisserek_foil",
++    11008_u32 => "cologne2026_signature_kisserek_holo",
++    11009_u32 => "cologne2026_signature_kisserek_gold",
++    11010_u32 => "cologne2026_signature_stressarn",
++    11011_u32 => "cologne2026_signature_stressarn_foil",
++    11012_u32 => "cologne2026_signature_stressarn_holo",
++    11013_u32 => "cologne2026_signature_stressarn_gold",
++    11014_u32 => "cologne2026_signature_grim",
++    11015_u32 => "cologne2026_signature_grim_foil",
++    11016_u32 => "cologne2026_signature_grim_holo",
++    11017_u32 => "cologne2026_signature_grim_gold",
++    11018_u32 => "cologne2026_signature_br0",
++    11019_u32 => "cologne2026_signature_br0_foil",
++    11020_u32 => "cologne2026_signature_br0_holo",
++    11021_u32 => "cologne2026_signature_br0_gold",
++    11022_u32 => "cologne2026_signature_osee",
++    11023_u32 => "cologne2026_signature_osee_foil",
++    11024_u32 => "cologne2026_signature_osee_holo",
++    11025_u32 => "cologne2026_signature_osee_gold",
++    11026_u32 => "cologne2026_signature_sonic",
++    11027_u32 => "cologne2026_signature_sonic_foil",
++    11028_u32 => "cologne2026_signature_sonic_holo",
++    11029_u32 => "cologne2026_signature_sonic_gold",
++    11030_u32 => "cologne2026_signature_nitro",
++    11031_u32 => "cologne2026_signature_nitro_foil",
++    11032_u32 => "cologne2026_signature_nitro_holo",
++    11033_u32 => "cologne2026_signature_nitro_gold",
++    11034_u32 => "cologne2026_signature_mercury",
++    11035_u32 => "cologne2026_signature_mercury_foil",
++    11036_u32 => "cologne2026_signature_mercury_holo",
++    11037_u32 => "cologne2026_signature_mercury_gold",
++    11038_u32 => "cologne2026_signature_jee",
++    11039_u32 => "cologne2026_signature_jee_foil",
++    11040_u32 => "cologne2026_signature_jee_holo",
++    11041_u32 => "cologne2026_signature_jee_gold",
++    11042_u32 => "cologne2026_signature_jamyoung",
++    11043_u32 => "cologne2026_signature_jamyoung_foil",
++    11044_u32 => "cologne2026_signature_jamyoung_holo",
++    11045_u32 => "cologne2026_signature_jamyoung_gold",
++    11046_u32 => "cologne2026_signature_moseyuh",
++    11047_u32 => "cologne2026_signature_moseyuh_foil",
++    11048_u32 => "cologne2026_signature_moseyuh_holo",
++    11049_u32 => "cologne2026_signature_moseyuh_gold",
++    11050_u32 => "cologne2026_signature_zerocn",
++    11051_u32 => "cologne2026_signature_zerocn_foil",
++    11052_u32 => "cologne2026_signature_zerocn_holo",
++    11053_u32 => "cologne2026_signature_zerocn_gold",
++    11054_u32 => "cologne2026_signature_gafolo",
++    11055_u32 => "cologne2026_signature_gafolo_foil",
++    11056_u32 => "cologne2026_signature_gafolo_holo",
++    11057_u32 => "cologne2026_signature_gafolo_gold",
++    11058_u32 => "cologne2026_signature_koala",
++    11059_u32 => "cologne2026_signature_koala_foil",
++    11060_u32 => "cologne2026_signature_koala_holo",
++    11061_u32 => "cologne2026_signature_koala_gold",
++    11062_u32 => "cologne2026_signature_maxxkor",
++    11063_u32 => "cologne2026_signature_maxxkor_foil",
++    11064_u32 => "cologne2026_signature_maxxkor_holo",
++    11065_u32 => "cologne2026_signature_maxxkor_gold",
++    11066_u32 => "cologne2026_signature_rdnzao",
++    11067_u32 => "cologne2026_signature_rdnzao_foil",
++    11068_u32 => "cologne2026_signature_rdnzao_holo",
++    11069_u32 => "cologne2026_signature_rdnzao_gold",
++    11070_u32 => "cologne2026_signature_doc",
++    11071_u32 => "cologne2026_signature_doc_foil",
++    11072_u32 => "cologne2026_signature_doc_holo",
++    11073_u32 => "cologne2026_signature_doc_gold",
++    11074_u32 => "cologne2026_signature_hen1",
++    11075_u32 => "cologne2026_signature_hen1_foil",
++    11076_u32 => "cologne2026_signature_hen1_holo",
++    11077_u32 => "cologne2026_signature_hen1_gold",
++    11078_u32 => "cologne2026_signature_felps",
++    11079_u32 => "cologne2026_signature_felps_foil",
++    11080_u32 => "cologne2026_signature_felps_holo",
++    11081_u32 => "cologne2026_signature_felps_gold",
++    11082_u32 => "cologne2026_signature_nekiz",
++    11083_u32 => "cologne2026_signature_nekiz_foil",
++    11084_u32 => "cologne2026_signature_nekiz_holo",
++    11085_u32 => "cologne2026_signature_nekiz_gold",
++    11086_u32 => "cologne2026_signature_luken",
++    11087_u32 => "cologne2026_signature_luken_foil",
++    11088_u32 => "cologne2026_signature_luken_holo",
++    11089_u32 => "cologne2026_signature_luken_gold",
++    11090_u32 => "cologne2026_signature_jota",
++    11091_u32 => "cologne2026_signature_jota_foil",
++    11092_u32 => "cologne2026_signature_jota_holo",
++    11093_u32 => "cologne2026_signature_jota_gold",
++    11094_u32 => "cologne2026_signature_elige",
++    11095_u32 => "cologne2026_signature_elige_foil",
++    11096_u32 => "cologne2026_signature_elige_holo",
++    11097_u32 => "cologne2026_signature_elige_gold",
++    11098_u32 => "cologne2026_signature_ultimate",
++    11099_u32 => "cologne2026_signature_ultimate_foil",
++    11100_u32 => "cologne2026_signature_ultimate_holo",
++    11101_u32 => "cologne2026_signature_ultimate_gold",
++    11102_u32 => "cologne2026_signature_malbsmd",
++    11103_u32 => "cologne2026_signature_malbsmd_foil",
++    11104_u32 => "cologne2026_signature_malbsmd_holo",
++    11105_u32 => "cologne2026_signature_malbsmd_gold",
++    11106_u32 => "cologne2026_signature_siuhy",
++    11107_u32 => "cologne2026_signature_siuhy_foil",
++    11108_u32 => "cologne2026_signature_siuhy_holo",
++    11109_u32 => "cologne2026_signature_siuhy_gold",
++    11110_u32 => "cologne2026_signature_naf",
++    11111_u32 => "cologne2026_signature_naf_foil",
++    11112_u32 => "cologne2026_signature_naf_holo",
++    11113_u32 => "cologne2026_signature_naf_gold",
++    11114_u32 => "cologne2026_signature_westmelon",
++    11115_u32 => "cologne2026_signature_westmelon_foil",
++    11116_u32 => "cologne2026_signature_westmelon_holo",
++    11117_u32 => "cologne2026_signature_westmelon_gold",
++    11118_u32 => "cologne2026_signature_z4kr",
++    11119_u32 => "cologne2026_signature_z4kr_foil",
++    11120_u32 => "cologne2026_signature_z4kr_holo",
++    11121_u32 => "cologne2026_signature_z4kr_gold",
++    11122_u32 => "cologne2026_signature_starry",
++    11123_u32 => "cologne2026_signature_starry_foil",
++    11124_u32 => "cologne2026_signature_starry_holo",
++    11125_u32 => "cologne2026_signature_starry_gold",
++    11126_u32 => "cologne2026_signature_emiliaqaq",
++    11127_u32 => "cologne2026_signature_emiliaqaq_foil",
++    11128_u32 => "cologne2026_signature_emiliaqaq_holo",
++    11129_u32 => "cologne2026_signature_emiliaqaq_gold",
++    11130_u32 => "cologne2026_signature_c4llm3su3",
++    11131_u32 => "cologne2026_signature_c4llm3su3_foil",
++    11132_u32 => "cologne2026_signature_c4llm3su3_holo",
++    11133_u32 => "cologne2026_signature_c4llm3su3_gold",
++    11134_u32 => "cologne2026_signature_dexter",
++    11135_u32 => "cologne2026_signature_dexter_foil",
++    11136_u32 => "cologne2026_signature_dexter_holo",
++    11137_u32 => "cologne2026_signature_dexter_gold",
++    11138_u32 => "cologne2026_signature_liazz",
++    11139_u32 => "cologne2026_signature_liazz_foil",
++    11140_u32 => "cologne2026_signature_liazz_holo",
++    11141_u32 => "cologne2026_signature_liazz_gold",
++    11142_u32 => "cologne2026_signature_alistair",
++    11143_u32 => "cologne2026_signature_alistair_foil",
++    11144_u32 => "cologne2026_signature_alistair_holo",
++    11145_u32 => "cologne2026_signature_alistair_gold",
++    11146_u32 => "cologne2026_signature_asap",
++    11147_u32 => "cologne2026_signature_asap_foil",
++    11148_u32 => "cologne2026_signature_asap_holo",
++    11149_u32 => "cologne2026_signature_asap_gold",
++    11150_u32 => "cologne2026_signature_tjp",
++    11151_u32 => "cologne2026_signature_tjp_foil",
++    11152_u32 => "cologne2026_signature_tjp_holo",
++    11153_u32 => "cologne2026_signature_tjp_gold",
++    11154_u32 => "cologne2026_signature_ins",
++    11155_u32 => "cologne2026_signature_ins_foil",
++    11156_u32 => "cologne2026_signature_ins_holo",
++    11157_u32 => "cologne2026_signature_ins_gold",
++    11158_u32 => "cologne2026_signature_jks",
++    11159_u32 => "cologne2026_signature_jks_foil",
++    11160_u32 => "cologne2026_signature_jks_holo",
++    11161_u32 => "cologne2026_signature_jks_gold",
++    11162_u32 => "cologne2026_signature_vexite",
++    11163_u32 => "cologne2026_signature_vexite_foil",
++    11164_u32 => "cologne2026_signature_vexite_holo",
++    11165_u32 => "cologne2026_signature_vexite_gold",
++    11166_u32 => "cologne2026_signature_story",
++    11167_u32 => "cologne2026_signature_story_foil",
++    11168_u32 => "cologne2026_signature_story_holo",
++    11169_u32 => "cologne2026_signature_story_gold",
++    11170_u32 => "cologne2026_signature_nettik",
++    11171_u32 => "cologne2026_signature_nettik_foil",
++    11172_u32 => "cologne2026_signature_nettik_holo",
++    11173_u32 => "cologne2026_signature_nettik_gold",
+ };
+ 
+ pub static WEAPINDICIES: phf::Map<u32, &'static str> = phf_map! {
+diff --git a/src/csgoproto/src/message_type.rs b/src/csgoproto/src/message_type.rs
+index 5dcd4cb..22cb5d6 100644
+--- a/src/csgoproto/src/message_type.rs
++++ b/src/csgoproto/src/message_type.rs
+@@ -99,6 +99,7 @@ pub enum NetMessageType {
+     UM_ExtraUserData,
+     UM_NotifyResponseFound,
+     UM_PlayResponseConditional,
++    UM_UserSentBugBug,
+     GE_VDebugGameSessionIDEvent,
+     GE_PlaceDecalEvent,
+     GE_ClearWorldDecalsEvent,
+@@ -189,6 +190,7 @@ pub enum NetMessageType {
+     CS_UM_DamagePrediction,
+     CS_UM_RecurringMissionSchema,
+     CS_UM_SendPlayerLoadout,
++    CS_UM_WeaponMagDrop,
+     GE_PlayerAnimEventId,
+     GE_RadioIconEventId,
+     GE_FireBulletsId,
+@@ -294,6 +296,7 @@ impl From<i32> for NetMessageType {
+             164 => UM_ExtraUserData,
+             165 => UM_NotifyResponseFound,
+             166 => UM_PlayResponseConditional,
++            167 => UM_UserSentBugBug,
+             200 => GE_VDebugGameSessionIDEvent,
+             201 => GE_PlaceDecalEvent,
+             202 => GE_ClearWorldDecalsEvent,
+@@ -384,6 +387,7 @@ impl From<i32> for NetMessageType {
+             386 => CS_UM_DamagePrediction,
+             387 => CS_UM_RecurringMissionSchema,
+             388 => CS_UM_SendPlayerLoadout,
++            389 => CS_UM_WeaponMagDrop,
+             450 => GE_PlayerAnimEventId,
+             451 => GE_RadioIconEventId,
+             452 => GE_FireBulletsId,
+diff --git a/src/csgoproto/src/protobuf.rs b/src/csgoproto/src/protobuf.rs
+index 22eaa47..0c83e53 100644
+--- a/src/csgoproto/src/protobuf.rs
++++ b/src/csgoproto/src/protobuf.rs
+@@ -2062,6 +2062,8 @@ pub struct CMsgGccStrike15V2ClientRequestJoinFriendData {
+     pub res: ::core::option::Option<CMsgGccStrike15V2MatchmakingGc2ClientReserve>,
+     #[prost(string, optional, tag="6")]
+     pub errormsg: ::core::option::Option<::prost::alloc::string::String>,
++    #[prost(bool, optional, tag="7")]
++    pub is_local_server: ::core::option::Option<bool>,
+ }
+ #[derive(Clone, PartialEq, ::prost::Message)]
+ pub struct CMsgGccStrike15V2ClientRequestJoinServerData {
+@@ -2080,7 +2082,7 @@ pub struct CMsgGccStrike15V2ClientRequestJoinServerData {
+     #[prost(string, optional, tag="7")]
+     pub errormsg: ::core::option::Option<::prost::alloc::string::String>,
+ }
+-#[derive(Clone, Copy, PartialEq, ::prost::Message)]
++#[derive(Clone, PartialEq, ::prost::Message)]
+ pub struct CMsgGcCstrike15V2ClientRedeemMissionReward {
+     #[prost(uint32, optional, tag="1")]
+     pub campaign_id: ::core::option::Option<u32>,
+@@ -2092,6 +2094,10 @@ pub struct CMsgGcCstrike15V2ClientRedeemMissionReward {
+     pub expected_cost: ::core::option::Option<u32>,
+     #[prost(int32, optional, tag="5")]
+     pub bid_control: ::core::option::Option<i32>,
++    #[prost(uint64, repeated, packed="false", tag="6")]
++    pub volatile_shop: ::prost::alloc::vec::Vec<u64>,
++    #[prost(uint64, optional, tag="7")]
++    pub souvenir_matchid: ::core::option::Option<u64>,
+ }
+ #[derive(Clone, PartialEq, ::prost::Message)]
+ pub struct CMsgGcCstrike15V2ClientRedeemFreeReward {
+@@ -2786,6 +2792,19 @@ pub struct CsoVolatileItemClaimedRewards {
+     #[prost(uint32, repeated, packed="false", tag="3")]
+     pub generation_time: ::prost::alloc::vec::Vec<u32>,
+ }
++#[derive(Clone, PartialEq, ::prost::Message)]
++pub struct CMsgGccStrike15V2VolatileShopSubscribe {
++    #[prost(uint32, optional, tag="1")]
++    pub defidx: ::core::option::Option<u32>,
++    #[prost(uint64, optional, tag="2")]
++    pub psid: ::core::option::Option<u64>,
++    #[prost(uint32, optional, tag="3")]
++    pub upnext: ::core::option::Option<u32>,
++    #[prost(uint32, optional, tag="4")]
++    pub gctime: ::core::option::Option<u32>,
++    #[prost(bytes="bytes", optional, tag="5")]
++    pub payload: ::core::option::Option<::prost::bytes::Bytes>,
++}
+ #[derive(Clone, Copy, PartialEq, ::prost::Message)]
+ pub struct CsoAccountKeychainRemoveToolCharges {
+     #[prost(uint32, optional, tag="1")]
+@@ -3218,49 +3237,6 @@ pub struct CvDiagnostic {
+     pub string_value: ::core::option::Option<::prost::alloc::string::String>,
+ }
+ #[derive(Clone, PartialEq, ::prost::Message)]
+-pub struct CMsgGccStrike15V2ClientReportValidation {
+-    #[prost(string, optional, tag="1")]
+-    pub file_report: ::core::option::Option<::prost::alloc::string::String>,
+-    #[prost(string, optional, tag="2")]
+-    pub command_line: ::core::option::Option<::prost::alloc::string::String>,
+-    #[prost(uint32, optional, tag="3")]
+-    pub total_files: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="4")]
+-    pub internal_error: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="5")]
+-    pub trust_time: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="6")]
+-    pub count_pending: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="7")]
+-    pub count_completed: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="8")]
+-    pub process_id: ::core::option::Option<u32>,
+-    #[prost(int32, optional, tag="9")]
+-    pub osversion: ::core::option::Option<i32>,
+-    #[prost(uint32, optional, tag="10")]
+-    pub clientreportversion: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="11")]
+-    pub status_id: ::core::option::Option<u32>,
+-    #[prost(uint32, optional, tag="12")]
+-    pub diagnostic1: ::core::option::Option<u32>,
+-    #[prost(uint64, optional, tag="13")]
+-    pub diagnostic2: ::core::option::Option<u64>,
+-    #[prost(uint64, optional, tag="14")]
+-    pub diagnostic3: ::core::option::Option<u64>,
+-    #[prost(string, optional, tag="15")]
+-    pub last_launch_data: ::core::option::Option<::prost::alloc::string::String>,
+-    #[prost(uint32, optional, tag="16")]
+-    pub report_count: ::core::option::Option<u32>,
+-    #[prost(uint64, optional, tag="17")]
+-    pub client_time: ::core::option::Option<u64>,
+-    #[prost(uint64, optional, tag="18")]
+-    pub diagnostic4: ::core::option::Option<u64>,
+-    #[prost(uint64, optional, tag="19")]
+-    pub diagnostic5: ::core::option::Option<u64>,
+-    #[prost(message, repeated, tag="20")]
+-    pub diagnostics: ::prost::alloc::vec::Vec<CvDiagnostic>,
+-}
+-#[derive(Clone, PartialEq, ::prost::Message)]
+ pub struct CMsgGccStrike15V2Gc2ClientRefuseSecureMode {
+     #[prost(string, optional, tag="1")]
+     pub file_report: ::core::option::Option<::prost::alloc::string::String>,
+@@ -3446,7 +3422,6 @@ pub enum ECsgoGcMsg {
+     KEMsgGccStrike15V2ClientPerfReport = 9202,
+     KEMsgGccStrike15V2GetEventFavoritesResponse = 9203,
+     KEMsgGccStrike15V2ClientRequestSouvenir = 9204,
+-    KEMsgGccStrike15V2ClientReportValidation = 9205,
+     KEMsgGccStrike15V2Gc2ClientRefuseSecureMode = 9206,
+     KEMsgGccStrike15V2Gc2ClientRequestValidation = 9207,
+     KEMsgGccStrike15V2ClientRedeemMissionReward = 9209,
+@@ -3467,6 +3442,7 @@ pub enum ECsgoGcMsg {
+     KEMsgGccStrike15V2RequestRecurringMissionSchedule = 9225,
+     KEMsgGccStrike15V2RecurringMissionSchema = 9226,
+     KEMsgGccStrike15V2VolatileItemClaimReward = 9227,
++    KEMsgGccStrike15V2VolatileShopSubscribe = 9228,
+ }
+ impl ECsgoGcMsg {
+     /// String value of the enum field names used in the ProtoBuf definition.
+@@ -3562,7 +3538,6 @@ impl ECsgoGcMsg {
+             Self::KEMsgGccStrike15V2ClientPerfReport => "k_EMsgGCCStrike15_v2_ClientPerfReport",
+             Self::KEMsgGccStrike15V2GetEventFavoritesResponse => "k_EMsgGCCStrike15_v2_GetEventFavorites_Response",
+             Self::KEMsgGccStrike15V2ClientRequestSouvenir => "k_EMsgGCCStrike15_v2_ClientRequestSouvenir",
+-            Self::KEMsgGccStrike15V2ClientReportValidation => "k_EMsgGCCStrike15_v2_ClientReportValidation",
+             Self::KEMsgGccStrike15V2Gc2ClientRefuseSecureMode => "k_EMsgGCCStrike15_v2_GC2ClientRefuseSecureMode",
+             Self::KEMsgGccStrike15V2Gc2ClientRequestValidation => "k_EMsgGCCStrike15_v2_GC2ClientRequestValidation",
+             Self::KEMsgGccStrike15V2ClientRedeemMissionReward => "k_EMsgGCCStrike15_v2_ClientRedeemMissionReward",
+@@ -3583,6 +3558,7 @@ impl ECsgoGcMsg {
+             Self::KEMsgGccStrike15V2RequestRecurringMissionSchedule => "k_EMsgGCCStrike15_v2_RequestRecurringMissionSchedule",
+             Self::KEMsgGccStrike15V2RecurringMissionSchema => "k_EMsgGCCStrike15_v2_RecurringMissionSchema",
+             Self::KEMsgGccStrike15V2VolatileItemClaimReward => "k_EMsgGCCStrike15_v2_VolatileItemClaimReward",
++            Self::KEMsgGccStrike15V2VolatileShopSubscribe => "k_EMsgGCCStrike15_v2_VolatileShopSubscribe",
+         }
+     }
+     /// Creates an enum from field names used in the ProtoBuf definition.
+@@ -3675,7 +3651,6 @@ impl ECsgoGcMsg {
+             "k_EMsgGCCStrike15_v2_ClientPerfReport" => Some(Self::KEMsgGccStrike15V2ClientPerfReport),
+             "k_EMsgGCCStrike15_v2_GetEventFavorites_Response" => Some(Self::KEMsgGccStrike15V2GetEventFavoritesResponse),
+             "k_EMsgGCCStrike15_v2_ClientRequestSouvenir" => Some(Self::KEMsgGccStrike15V2ClientRequestSouvenir),
+-            "k_EMsgGCCStrike15_v2_ClientReportValidation" => Some(Self::KEMsgGccStrike15V2ClientReportValidation),
+             "k_EMsgGCCStrike15_v2_GC2ClientRefuseSecureMode" => Some(Self::KEMsgGccStrike15V2Gc2ClientRefuseSecureMode),
+             "k_EMsgGCCStrike15_v2_GC2ClientRequestValidation" => Some(Self::KEMsgGccStrike15V2Gc2ClientRequestValidation),
+             "k_EMsgGCCStrike15_v2_ClientRedeemMissionReward" => Some(Self::KEMsgGccStrike15V2ClientRedeemMissionReward),
+@@ -3696,6 +3671,7 @@ impl ECsgoGcMsg {
+             "k_EMsgGCCStrike15_v2_RequestRecurringMissionSchedule" => Some(Self::KEMsgGccStrike15V2RequestRecurringMissionSchedule),
+             "k_EMsgGCCStrike15_v2_RecurringMissionSchema" => Some(Self::KEMsgGccStrike15V2RecurringMissionSchema),
+             "k_EMsgGCCStrike15_v2_VolatileItemClaimReward" => Some(Self::KEMsgGccStrike15V2VolatileItemClaimReward),
++            "k_EMsgGCCStrike15_v2_VolatileShopSubscribe" => Some(Self::KEMsgGccStrike15V2VolatileShopSubscribe),
+             _ => None,
+         }
+     }
+@@ -4946,6 +4922,15 @@ pub struct CcsUsrMsgWeaponSound {
+     pub source_soundscapeid: ::core::option::Option<u32>,
+ }
+ #[derive(Clone, Copy, PartialEq, ::prost::Message)]
++pub struct CcsUsrMsgWeaponMagDrop {
++    #[prost(int32, optional, tag="1", default="-1")]
++    pub entidx: ::core::option::Option<i32>,
++    #[prost(int32, optional, tag="2")]
++    pub secondary_data: ::core::option::Option<i32>,
++    #[prost(bool, optional, tag="3")]
++    pub server_event: ::core::option::Option<bool>,
++}
++#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+ pub struct CcsUsrMsgUpdateScreenHealthBar {
+     #[prost(int32, optional, tag="1", default="-1")]
+     pub entidx: ::core::option::Option<i32>,
+@@ -5613,6 +5598,7 @@ pub enum ECstrike15UserMessages {
+     CsUmDamagePrediction = 386,
+     CsUmRecurringMissionSchema = 387,
+     CsUmSendPlayerLoadout = 388,
++    CsUmWeaponMagDrop = 389,
+ }
+ impl ECstrike15UserMessages {
+     /// String value of the enum field names used in the ProtoBuf definition.
+@@ -5698,6 +5684,7 @@ impl ECstrike15UserMessages {
+             Self::CsUmDamagePrediction => "CS_UM_DamagePrediction",
+             Self::CsUmRecurringMissionSchema => "CS_UM_RecurringMissionSchema",
+             Self::CsUmSendPlayerLoadout => "CS_UM_SendPlayerLoadout",
++            Self::CsUmWeaponMagDrop => "CS_UM_WeaponMagDrop",
+         }
+     }
+     /// Creates an enum from field names used in the ProtoBuf definition.
+@@ -5780,6 +5767,7 @@ impl ECstrike15UserMessages {
+             "CS_UM_DamagePrediction" => Some(Self::CsUmDamagePrediction),
+             "CS_UM_RecurringMissionSchema" => Some(Self::CsUmRecurringMissionSchema),
+             "CS_UM_SendPlayerLoadout" => Some(Self::CsUmSendPlayerLoadout),
++            "CS_UM_WeaponMagDrop" => Some(Self::CsUmWeaponMagDrop),
+             _ => None,
+         }
+     }
+@@ -6229,6 +6217,10 @@ pub struct CUserMsgParticleManager {
+     pub set_particle_cluster_growth: ::core::option::Option<c_user_msg_particle_manager::SetParticleClusterGrowth>,
+     #[prost(message, optional, tag="42")]
+     pub remove_fan: ::core::option::Option<c_user_msg_particle_manager::RemoveFan>,
++    #[prost(message, optional, tag="43")]
++    pub create_smoke_grid: ::core::option::Option<c_user_msg_particle_manager::CreateSmokeGrid>,
++    #[prost(message, optional, tag="44")]
++    pub set_override_texture: ::core::option::Option<c_user_msg_particle_manager::SetOverrideTexture>,
+ }
+ /// Nested message and enum types in `CUserMsg_ParticleManager`.
+ pub mod c_user_msg_particle_manager {
+@@ -6414,6 +6406,8 @@ pub mod c_user_msg_particle_manager {
+     pub struct SetParticleText {
+         #[prost(string, optional, tag="1")]
+         pub text: ::core::option::Option<::prost::alloc::string::String>,
++        #[prost(bool, optional, tag="2")]
++        pub localize: ::core::option::Option<bool>,
+     }
+     #[derive(Clone, PartialEq, ::prost::Message)]
+     pub struct SetTextureAttribute {
+@@ -6422,6 +6416,11 @@ pub mod c_user_msg_particle_manager {
+         #[prost(string, optional, tag="2")]
+         pub texture_name: ::core::option::Option<::prost::alloc::string::String>,
+     }
++    #[derive(Clone, PartialEq, ::prost::Message)]
++    pub struct SetOverrideTexture {
++        #[prost(string, optional, tag="1")]
++        pub texture_name: ::core::option::Option<::prost::alloc::string::String>,
++    }
+     #[derive(Clone, Copy, PartialEq, ::prost::Message)]
+     pub struct SetSceneObjectGenericFlag {
+         #[prost(bool, optional, tag="1")]
+@@ -6529,6 +6528,11 @@ pub mod c_user_msg_particle_manager {
+     pub struct DestroyPhysicsSim {
+     }
+     #[derive(Clone, PartialEq, ::prost::Message)]
++    pub struct CreateSmokeGrid {
++        #[prost(string, optional, tag="1")]
++        pub vdata_name: ::core::option::Option<::prost::alloc::string::String>,
++    }
++    #[derive(Clone, PartialEq, ::prost::Message)]
+     pub struct SetVData {
+         #[prost(string, optional, tag="1")]
+         pub vdata_name: ::core::option::Option<::prost::alloc::string::String>,
+@@ -7041,6 +7045,7 @@ pub enum EBaseUserMessages {
+     UmExtraUserData = 164,
+     UmNotifyResponseFound = 165,
+     UmPlayResponseConditional = 166,
++    UmUserSentBugBug = 167,
+     UmMaxBase = 200,
+ }
+ impl EBaseUserMessages {
+@@ -7100,6 +7105,7 @@ impl EBaseUserMessages {
+             Self::UmExtraUserData => "UM_ExtraUserData",
+             Self::UmNotifyResponseFound => "UM_NotifyResponseFound",
+             Self::UmPlayResponseConditional => "UM_PlayResponseConditional",
++            Self::UmUserSentBugBug => "UM_UserSentBugBug",
+             Self::UmMaxBase => "UM_MAX_BASE",
+         }
+     }
+@@ -7156,6 +7162,7 @@ impl EBaseUserMessages {
+             "UM_ExtraUserData" => Some(Self::UmExtraUserData),
+             "UM_NotifyResponseFound" => Some(Self::UmNotifyResponseFound),
+             "UM_PlayResponseConditional" => Some(Self::UmPlayResponseConditional),
++            "UM_UserSentBugBug" => Some(Self::UmUserSentBugBug),
+             "UM_MAX_BASE" => Some(Self::UmMaxBase),
+             _ => None,
+         }
+@@ -7280,6 +7287,8 @@ pub enum ParticleMessage {
+     GameParticleManagerEventUpdateFan = 37,
+     GameParticleManagerEventSetClusterGrowth = 38,
+     GameParticleManagerEventRemoveFan = 39,
++    GameParticleManagerEventCreateSmokeGrid = 40,
++    GameParticleManagerEventSetOverrideTexture = 41,
+ }
+ impl ParticleMessage {
+     /// String value of the enum field names used in the ProtoBuf definition.
+@@ -7328,6 +7337,8 @@ impl ParticleMessage {
+             Self::GameParticleManagerEventUpdateFan => "GAME_PARTICLE_MANAGER_EVENT_UPDATE_FAN",
+             Self::GameParticleManagerEventSetClusterGrowth => "GAME_PARTICLE_MANAGER_EVENT_SET_CLUSTER_GROWTH",
+             Self::GameParticleManagerEventRemoveFan => "GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN",
++            Self::GameParticleManagerEventCreateSmokeGrid => "GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID",
++            Self::GameParticleManagerEventSetOverrideTexture => "GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE",
+         }
+     }
+     /// Creates an enum from field names used in the ProtoBuf definition.
+@@ -7373,6 +7384,8 @@ impl ParticleMessage {
+             "GAME_PARTICLE_MANAGER_EVENT_UPDATE_FAN" => Some(Self::GameParticleManagerEventUpdateFan),
+             "GAME_PARTICLE_MANAGER_EVENT_SET_CLUSTER_GROWTH" => Some(Self::GameParticleManagerEventSetClusterGrowth),
+             "GAME_PARTICLE_MANAGER_EVENT_REMOVE_FAN" => Some(Self::GameParticleManagerEventRemoveFan),
++            "GAME_PARTICLE_MANAGER_EVENT_CREATE_SMOKE_GRID" => Some(Self::GameParticleManagerEventCreateSmokeGrid),
++            "GAME_PARTICLE_MANAGER_EVENT_SET_OVERRIDE_TEXTURE" => Some(Self::GameParticleManagerEventSetOverrideTexture),
+             _ => None,
+         }
+     }
+@@ -7675,6 +7688,12 @@ pub struct CMsgSource2PlayStatsPackedRecordList {
+     pub low_cardinality_string_vals: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+     #[prost(fixed32, repeated, tag="17")]
+     pub utcdatetime_vals: ::prost::alloc::vec::Vec<u32>,
++    #[prost(fixed64, repeated, tag="18")]
++    pub steamidtrustbucket_vals: ::prost::alloc::vec::Vec<u64>,
++    #[prost(message, repeated, tag="19")]
++    pub trustbucket_vals: ::prost::alloc::vec::Vec<c_msg_source2_play_stats_packed_record_list::SteamIdList>,
++    #[prost(uint64, repeated, tag="20")]
++    pub steamid_vals: ::prost::alloc::vec::Vec<u64>,
+ }
+ /// Nested message and enum types in `CMsgSource2PlayStatsPackedRecordList`.
+ pub mod c_msg_source2_play_stats_packed_record_list {
+@@ -7685,6 +7704,11 @@ pub mod c_msg_source2_play_stats_packed_record_list {
+         #[prost(enumeration="super::ESource2PlayStatsFieldType", optional, tag="2", default="Source2PlayStatsInvalid")]
+         pub field_type: ::core::option::Option<i32>,
+     }
++    #[derive(Clone, PartialEq, ::prost::Message)]
++    pub struct SteamIdList {
++        #[prost(fixed64, repeated, tag="1")]
++        pub steamid: ::prost::alloc::vec::Vec<u64>,
++    }
+ }
+ #[derive(Clone, PartialEq, ::prost::Message)]
+ pub struct CSource2MetricsRecordPlayStatsNotification {
+@@ -7693,6 +7717,53 @@ pub struct CSource2MetricsRecordPlayStatsNotification {
+     #[prost(uint32, optional, tag="2")]
+     pub appid: ::core::option::Option<u32>,
+ }
++#[derive(Clone, PartialEq, ::prost::Message)]
++pub struct CSource2MetricsFetchMapDataRequest {
++    #[prost(uint32, optional, tag="1")]
++    pub appid: ::core::option::Option<u32>,
++    #[prost(string, optional, tag="2")]
++    pub map_name: ::core::option::Option<::prost::alloc::string::String>,
++    #[prost(uint32, optional, tag="3")]
++    pub game_type: ::core::option::Option<u32>,
++    #[prost(uint32, optional, tag="4")]
++    pub game_mode: ::core::option::Option<u32>,
++    #[prost(string, optional, tag="5")]
++    pub param: ::core::option::Option<::prost::alloc::string::String>,
++    #[prost(uint32, optional, tag="6")]
++    pub time_span: ::core::option::Option<u32>,
++}
++#[derive(Clone, PartialEq, ::prost::Message)]
++pub struct CSource2MetricsFetchMapDataResponse {
++    #[prost(message, repeated, tag="1")]
++    pub results: ::prost::alloc::vec::Vec<c_source2_metrics_fetch_map_data_response::MapData>,
++}
++/// Nested message and enum types in `CSource2Metrics_FetchMapData_Response`.
++pub mod c_source2_metrics_fetch_map_data_response {
++    #[derive(Clone, PartialEq, ::prost::Message)]
++    pub struct MapData {
++        #[prost(string, optional, tag="1")]
++        pub name: ::core::option::Option<::prost::alloc::string::String>,
++        #[prost(string, optional, tag="2")]
++        pub r#type: ::core::option::Option<::prost::alloc::string::String>,
++        #[prost(string, optional, tag="3")]
++        pub data: ::core::option::Option<::prost::alloc::string::String>,
++    }
++}
++#[derive(Clone, PartialEq, ::prost::Message)]
++pub struct CUserMessageUserSentBugBug {
++    #[prost(string, optional, tag="1")]
++    pub command_line: ::core::option::Option<::prost::alloc::string::String>,
++    #[prost(string, optional, tag="2")]
++    pub autoexec_cfg: ::core::option::Option<::prost::alloc::string::String>,
++    #[prost(message, optional, tag="3")]
++    pub system_specs: ::core::option::Option<CMsgSource2SystemSpecs>,
++    #[prost(uint32, optional, tag="4")]
++    pub build_id: ::core::option::Option<u32>,
++    #[prost(int32, optional, tag="5")]
++    pub osversion: ::core::option::Option<i32>,
++    #[prost(string, optional, tag="6")]
++    pub command_logs: ::core::option::Option<::prost::alloc::string::String>,
++}
+ #[derive(::strum::EnumIter)]
+ #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+ #[repr(i32)]
+@@ -7712,6 +7783,9 @@ pub enum ESource2PlayStatsFieldType {
+     Source2PlayStatsString = 12,
+     Source2PlayStatsLowCardinalityString = 13,
+     Source2PlayStatsUtcDateTime = 14,
++    Source2PlayStatsSteamIdTrustBucket = 15,
++    Source2PlayStatsSteamIdTrustBucketMin = 16,
++    Source2PlayStatsSteamId = 17,
+ }
+ impl ESource2PlayStatsFieldType {
+     /// String value of the enum field names used in the ProtoBuf definition.
+@@ -7735,6 +7809,9 @@ impl ESource2PlayStatsFieldType {
+             Self::Source2PlayStatsString => "Source2PlayStats_String",
+             Self::Source2PlayStatsLowCardinalityString => "Source2PlayStats_LowCardinalityString",
+             Self::Source2PlayStatsUtcDateTime => "Source2PlayStats_UTCDateTime",
++            Self::Source2PlayStatsSteamIdTrustBucket => "Source2PlayStats_SteamIDTrustBucket",
++            Self::Source2PlayStatsSteamIdTrustBucketMin => "Source2PlayStats_SteamIDTrustBucketMin",
++            Self::Source2PlayStatsSteamId => "Source2PlayStats_SteamID",
+         }
+     }
+     /// Creates an enum from field names used in the ProtoBuf definition.
+@@ -7755,6 +7832,9 @@ impl ESource2PlayStatsFieldType {
+             "Source2PlayStats_String" => Some(Self::Source2PlayStatsString),
+             "Source2PlayStats_LowCardinalityString" => Some(Self::Source2PlayStatsLowCardinalityString),
+             "Source2PlayStats_UTCDateTime" => Some(Self::Source2PlayStatsUtcDateTime),
++            "Source2PlayStats_SteamIDTrustBucket" => Some(Self::Source2PlayStatsSteamIdTrustBucket),
++            "Source2PlayStats_SteamIDTrustBucketMin" => Some(Self::Source2PlayStatsSteamIdTrustBucketMin),
++            "Source2PlayStats_SteamID" => Some(Self::Source2PlayStatsSteamId),
+             _ => None,
+         }
+     }
+@@ -9019,7 +9099,7 @@ impl SvcMessagesLowFrequency {
+ pub enum BidirectionalMessages {
+     BiRebroadcastGameEvent = 16,
+     BiRebroadcastSource = 17,
+-    BiGameEvent = 18,
++    BiGameEventDeprecated = 18,
+     BiPredictionEvent = 19,
+ }
+ impl BidirectionalMessages {
+@@ -9031,7 +9111,7 @@ impl BidirectionalMessages {
+         match self {
+             Self::BiRebroadcastGameEvent => "bi_RebroadcastGameEvent",
+             Self::BiRebroadcastSource => "bi_RebroadcastSource",
+-            Self::BiGameEvent => "bi_GameEvent",
++            Self::BiGameEventDeprecated => "bi_GameEvent_DEPRECATED",
+             Self::BiPredictionEvent => "bi_PredictionEvent",
+         }
+     }
+@@ -9040,7 +9120,7 @@ impl BidirectionalMessages {
+         match value {
+             "bi_RebroadcastGameEvent" => Some(Self::BiRebroadcastGameEvent),
+             "bi_RebroadcastSource" => Some(Self::BiRebroadcastSource),
+-            "bi_GameEvent" => Some(Self::BiGameEvent),
++            "bi_GameEvent_DEPRECATED" => Some(Self::BiGameEventDeprecated),
+             "bi_PredictionEvent" => Some(Self::BiPredictionEvent),
+             _ => None,
+         }
+@@ -9049,33 +9129,6 @@ impl BidirectionalMessages {
+ #[derive(::strum::EnumIter)]
+ #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+ #[repr(i32)]
+-pub enum BidirectionalMessagesLowFrequency {
+-    BiRelayInfo = 700,
+-    BiRelayPacket = 701,
+-}
+-impl BidirectionalMessagesLowFrequency {
+-    /// String value of the enum field names used in the ProtoBuf definition.
+-    ///
+-    /// The values are not transformed in any way and thus are considered stable
+-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+-    pub fn as_str_name(&self) -> &'static str {
+-        match self {
+-            Self::BiRelayInfo => "bi_RelayInfo",
+-            Self::BiRelayPacket => "bi_RelayPacket",
+-        }
+-    }
+-    /// Creates an enum from field names used in the ProtoBuf definition.
+-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+-        match value {
+-            "bi_RelayInfo" => Some(Self::BiRelayInfo),
+-            "bi_RelayPacket" => Some(Self::BiRelayPacket),
+-            _ => None,
+-        }
+-    }
+-}
+-#[derive(::strum::EnumIter)]
+-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+-#[repr(i32)]
+ pub enum ReplayEventTypeT {
+     ReplayEventCancel = 0,
+     ReplayEventDeath = 1,
+@@ -9287,6 +9340,8 @@ pub struct CMsgPlaceDecalEvent {
+     pub material_id: ::core::option::Option<u64>,
+     #[prost(uint32, optional, tag="12")]
+     pub sequence_name: ::core::option::Option<u32>,
++    #[prost(message, optional, tag="14")]
++    pub position_objectspace: ::core::option::Option<CMsgVector>,
+ }
+ #[derive(Clone, Copy, PartialEq, ::prost::Message)]
+ pub struct CMsgClearWorldDecalsEvent {
+@@ -9565,6 +9620,8 @@ pub struct CMsgPlayerBulletHit {
+     pub penetration_count: ::core::option::Option<i32>,
+     #[prost(bool, optional, tag="7")]
+     pub is_kill: ::core::option::Option<bool>,
++    #[prost(bool, optional, tag="8")]
++    pub through_smoke: ::core::option::Option<bool>,
+ }
+ #[derive(::strum::EnumIter)]
+ #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+diff --git a/src/parser/src/first_pass/prop_controller.rs b/src/parser/src/first_pass/prop_controller.rs
+index 03dccfa..f57c292 100644
+--- a/src/parser/src/first_pass/prop_controller.rs
++++ b/src/parser/src/first_pass/prop_controller.rs
+@@ -78,6 +78,7 @@ pub const USERCMD_ATTACK_START_HISTORY_INDEX_2: u32 = 100000041;
+ pub const USERCMD_ATTACK_START_HISTORY_INDEX_3: u32 = 100000042;
+ 
+ pub const USERCMD_INPUT_HISTORY_BASEID: u32 = 100001000;
++pub const USERCMD_SUBTICK_MOVES_BASEID: u32 = 100001100;
+ pub const INPUT_HISTORY_X_OFFSET: u32 = 0;
+ pub const INPUT_HISTORY_Y_OFFSET: u32 = 1;
+ pub const INPUT_HISTORY_Z_OFFSET: u32 = 2;
+diff --git a/src/parser/src/maps.rs b/src/parser/src/maps.rs
+index 6e501eb..249529a 100644
+--- a/src/parser/src/maps.rs
++++ b/src/parser/src/maps.rs
+@@ -223,7 +223,10 @@ pub static CUSTOM_PLAYER_PROP_IDS: phf::Map<&'static str, u32> = phf_map! {
+     "usercmd_mouse_dy" => USERCMD_MOUSE_DY,
+     "usercmd_left_hand_desired" => USERCMD_SUBTICK_LEFT_HAND_DESIRED,
+     "usercmd_weapon_select" => USERCMD_WEAPON_SELECT,
++    "usercmd_attack1_start_history_index" => USERCMD_ATTACK_START_HISTORY_INDEX_1,
++    "usercmd_attack2_start_history_index" => USERCMD_ATTACK_START_HISTORY_INDEX_2,
+     "usercmd_input_history" => USERCMD_INPUT_HISTORY_BASEID,
++    "usercmd_subtick_moves" => USERCMD_SUBTICK_MOVES_BASEID,
+ 
+ 
+ 
+@@ -256,8 +259,11 @@ pub static TYPEHM: phf::Map<&'static str, PropType> = phf_map! {
+     "usercmd_buttonstate_3" => PropType::Player,
+     "usercmd_weapon_select" => PropType::Player,
+     "usercmd_left_hand_desired" => PropType::Player,
++    "usercmd_attack1_start_history_index" => PropType::Player,
++    "usercmd_attack2_start_history_index" => PropType::Player,
+     "usercmd_consumed_server_angle_changes" => PropType::Player,
+     "usercmd_input_history" => PropType::Custom,
++    "usercmd_subtick_moves" => PropType::Custom,
+ 
+ 
+     "CCSPlayerPawn.CCSPlayer_MovementServices.m_nButtonDownMaskPrev" => PropType::Player,
+@@ -866,8 +872,11 @@ pub static FRIENDLY_NAMES_MAPPING: phf::Map<&'static str, &'static str> = phf_ma
+     "usercmd_buttonstate_3" => "usercmd_buttonstate_3",
+     "usercmd_weapon_select" => "usercmd_weapon_select",
+     "usercmd_left_hand_desired" => "usercmd_left_hand_desired",
++    "usercmd_attack1_start_history_index" => "usercmd_attack1_start_history_index",
++    "usercmd_attack2_start_history_index" => "usercmd_attack2_start_history_index",
+     "usercmd_consumed_server_angle_changes" => "usercmd_consumed_server_angle_changes",
+     "usercmd_input_history" => "usercmd_input_history",
++    "usercmd_subtick_moves" => "usercmd_subtick_moves",
+ 
+     "active_weapon_skin" => "weapon_skin",
+     "weapon_skin_id" => "weapon_skin_id",
+diff --git a/src/parser/src/second_pass/collect_data.rs b/src/parser/src/second_pass/collect_data.rs
+index 7f4b27b..881d29b 100644
+--- a/src/parser/src/second_pass/collect_data.rs
++++ b/src/parser/src/second_pass/collect_data.rs
+@@ -445,6 +445,7 @@ impl<'a> SecondPassParser<'a> {
+             "agent_skin" => return self.find_agent_skin(player),
+             "CCSPlayerController.m_iCompTeammateColor" => return self.find_player_color(player, prop_info),
+             "usercmd_input_history" => self.get_prop_from_ent(&USERCMD_INPUT_HISTORY_BASEID, entity_id),
++            "usercmd_subtick_moves" => self.get_prop_from_ent(&USERCMD_SUBTICK_MOVES_BASEID, entity_id),
+             "glove_paint_id" => self.find_glove_skin_id(entity_id),
+             "glove_skin" => self.find_glove_skin(entity_id),
+             "glove_paint_seed" => self.find_glove_paint_seed(entity_id),
+diff --git a/src/parser/src/second_pass/parser.rs b/src/parser/src/second_pass/parser.rs
+index b148b90..3499126 100644
+--- a/src/parser/src/second_pass/parser.rs
++++ b/src/parser/src/second_pass/parser.rs
+@@ -30,7 +30,7 @@ use prost::Message;
+ use snap::raw::decompress_len;
+ use snap::raw::Decoder as SnapDecoder;
+ 
+-use super::variants::InputHistory;
++use super::variants::{InputHistory, SubtickMove};
+ 
+ const OUTER_BUF_DEFAULT_LEN: usize = 400_000;
+ const INNER_BUF_DEFAULT_LEN: usize = 8192 * 15;
+@@ -261,31 +261,52 @@ impl<'a> SecondPassParser<'a> {
+                 _ => return Ok(()),
+             };
+ 
++            let mut history = vec![];
++            for input in user_cmd.input_history.iter() {
++                // view_angles may be absent on some entries; default the angle to (0, 0, 0)
++                // rather than panicking, matching prost's default accessor behaviour.
++                let view_angles = input.view_angles.clone().unwrap_or_default();
++                let ih = InputHistory {
++                    player_tick_count: input.player_tick_count(),
++                    player_tick_fraction: input.player_tick_fraction(),
++                    render_tick_count: input.render_tick_count(),
++                    render_tick_fraction: input.render_tick_fraction(),
++                    x: view_angles.x(),
++                    y: view_angles.y(),
++                    z: view_angles.z(),
++                };
++                history.push(ih);
++            }
++            let attack1_start_history_index = user_cmd.attack1_start_history_index();
++            let attack2_start_history_index = user_cmd.attack2_start_history_index();
++            let left_hand_desired = user_cmd.left_hand_desired();
++
+             if let Some(base) = user_cmd.base {
+                 let entity_id = base.pawn_entity_handle() & 0x7FF;
+                 if let Some(Some(ent)) = self.entities.get_mut(entity_id as usize) {
+-                    let mut history = vec![];
+-                    for input in user_cmd.input_history {
+-                        // view_angles may be absent on some entries; default the angle to (0, 0, 0)
+-                        // rather than panicking, matching prost's default accessor behaviour.
+-                        let view_angles = input.view_angles.clone().unwrap_or_default();
+-                        let ih = InputHistory {
+-                            player_tick_count: input.player_tick_count(),
+-                            player_tick_fraction: input.player_tick_fraction(),
+-                            render_tick_count: input.render_tick_count(),
+-                            render_tick_fraction: input.render_tick_fraction(),
+-                            x: view_angles.x(),
+-                            y: view_angles.y(),
+-                            z: view_angles.z(),
+-                        };
+-                        history.push(ih);
+-                    }
+                     ent.props.insert(USERCMD_INPUT_HISTORY_BASEID, Variant::InputHistory(history));
++                    let mut subtick_moves = vec![];
++                    for step in base.subtick_moves.iter() {
++                        subtick_moves.push(SubtickMove {
++                            when: step.when(),
++                            button: step.button(),
++                            pressed: if step.pressed() { 1.0 } else { 0.0 },
++                            analog_forward_delta: step.analog_forward_delta(),
++                            analog_left_delta: step.analog_left_delta(),
++                            pitch_delta: step.pitch_delta(),
++                            yaw_delta: step.yaw_delta(),
++                        });
++                    }
++                    ent.props.insert(USERCMD_SUBTICK_MOVES_BASEID, Variant::SubtickMoves(subtick_moves));
+                     ent.props.insert(USERCMD_LEFTMOVE, Variant::F32(base.leftmove()));
+                     ent.props.insert(USERCMD_FORWARDMOVE, Variant::F32(base.forwardmove()));
+                     ent.props.insert(USERCMD_IMPULSE, Variant::I32(base.impulse()));
+                     ent.props.insert(USERCMD_MOUSE_DX, Variant::I32(base.mousedx()));
+                     ent.props.insert(USERCMD_MOUSE_DY, Variant::I32(base.mousedy()));
++                    ent.props.insert(USERCMD_WEAPON_SELECT, Variant::I32(base.weaponselect()));
++                    ent.props.insert(USERCMD_SUBTICK_LEFT_HAND_DESIRED, Variant::Bool(left_hand_desired));
++                    ent.props.insert(USERCMD_ATTACK_START_HISTORY_INDEX_1, Variant::I32(attack1_start_history_index));
++                    ent.props.insert(USERCMD_ATTACK_START_HISTORY_INDEX_2, Variant::I32(attack2_start_history_index));
+                     if let Some(viewangles) = base.viewangles {
+                         ent.props.insert(USERCMD_VIEWANGLE_X, Variant::F32(viewangles.x()));
+                         ent.props.insert(USERCMD_VIEWANGLE_Y, Variant::F32(viewangles.y()));
+diff --git a/src/parser/src/second_pass/variants.rs b/src/parser/src/second_pass/variants.rs
+index bdf2114..6d54efa 100644
+--- a/src/parser/src/second_pass/variants.rs
++++ b/src/parser/src/second_pass/variants.rs
+@@ -23,6 +23,7 @@ pub enum Variant {
+     U64Vec(Vec<u64>),
+     Stickers(Vec<Sticker>),
+     InputHistory(Vec<InputHistory>),
++    SubtickMoves(Vec<SubtickMove>),
+ }
+ #[derive(Debug, Clone, PartialEq, Serialize)]
+ pub struct Sticker {
+@@ -42,6 +43,16 @@ pub struct InputHistory {
+     pub player_tick_count: i32,
+     pub player_tick_fraction: f32,
+ }
++#[derive(Debug, Clone, PartialEq, Serialize)]
++pub struct SubtickMove {
++    pub when: f32,
++    pub button: u64,
++    pub pressed: f32,
++    pub analog_forward_delta: f32,
++    pub analog_left_delta: f32,
++    pub pitch_delta: f32,
++    pub yaw_delta: f32,
++}
+ 
+ #[derive(Debug, Clone, PartialEq)]
+ pub enum VarVec {
+@@ -58,6 +69,7 @@ pub enum VarVec {
+     XYZVec(Vec<Option<[f32; 3]>>),
+     Stickers(Vec<Vec<Sticker>>),
+     InputHistory(Vec<Vec<InputHistory>>),
++    SubtickMoves(Vec<Vec<SubtickMove>>),
+ }
+ 
+ impl VarVec {
+@@ -76,6 +88,7 @@ impl VarVec {
+             Variant::VecXYZ(_) => VarVec::XYZVec(vec![]),
+             Variant::Stickers(_) => VarVec::Stickers(vec![]),
+             Variant::InputHistory(_) => VarVec::InputHistory(vec![]),
++            Variant::SubtickMoves(_) => VarVec::SubtickMoves(vec![]),
+         }
+     }
+ }
+@@ -105,6 +118,7 @@ impl PropColumn {
+             Some(VarVec::XYZVec(b)) => VarVec::XYZVec(indicies.iter().map(|x| b[*x]).collect_vec()),
+             Some(VarVec::Stickers(b)) => VarVec::Stickers(indicies.iter().map(|x| b[*x].to_owned()).collect_vec()),
+             Some(VarVec::InputHistory(b)) => VarVec::InputHistory(indicies.iter().map(|x| b[*x].to_owned()).collect_vec()),
++            Some(VarVec::SubtickMoves(b)) => VarVec::SubtickMoves(indicies.iter().map(|x| b[*x].to_owned()).collect_vec()),
+             None => {
+                 return Some(PropColumn {
+                     data: None,
+@@ -132,6 +146,7 @@ impl PropColumn {
+             Some(VarVec::XYZVec(b)) => b.len(),
+             Some(VarVec::Stickers(b)) => b.len(),
+             Some(VarVec::InputHistory(b)) => b.len(),
++            Some(VarVec::SubtickMoves(b)) => b.len(),
+             None => self.num_nones,
+         }
+     }
+@@ -269,6 +284,17 @@ impl PropColumn {
+                 }
+                 _ => {}
+             },
++            Some(VarVec::SubtickMoves(v)) => match &other.data {
++                Some(VarVec::SubtickMoves(v_other)) => {
++                    v.extend_from_slice(&v_other);
++                }
++                None => {
++                    for _ in 0..other.num_nones {
++                        v.push(vec![]);
++                    }
++                }
++                _ => {}
++            },
+             Some(VarVec::U32Vec(v)) => match &other.data {
+                 Some(VarVec::U32Vec(v_other)) => {
+                     v.extend_from_slice(&v_other);
+@@ -333,6 +359,10 @@ impl PropColumn {
+                     self.resolve_vec_type(PropColumn::get_type(&other.data));
+                     self.extend_from(other);
+                 }
++                Some(VarVec::SubtickMoves(_inner)) => {
++                    self.resolve_vec_type(PropColumn::get_type(&other.data));
++                    self.extend_from(other);
++                }
+                 None => {
+                     self.num_nones += other.num_nones;
+                 }
+@@ -355,6 +385,7 @@ impl PropColumn {
+             Some(VarVec::Stickers(_)) => Some(10),
+             Some(VarVec::U32Vec(_)) => Some(11),
+             Some(VarVec::InputHistory(_)) => Some(12),
++            Some(VarVec::SubtickMoves(_)) => Some(13),
+ 
+             None => None,
+         }
+@@ -377,6 +408,7 @@ impl PropColumn {
+             Some(10) => self.data = Some(VarVec::Stickers(vec![])),
+             Some(11) => self.data = Some(VarVec::U32Vec(vec![])),
+             Some(12) => self.data = Some(VarVec::InputHistory(vec![])),
++            Some(13) => self.data = Some(VarVec::SubtickMoves(vec![])),
+             _ => {}
+         }
+         for _ in 0..self.num_nones {
+@@ -461,6 +493,10 @@ impl VarVec {
+                 VarVec::InputHistory(f) => f.push(p),
+                 _ => {}
+             },
++            Some(Variant::SubtickMoves(p)) => match self {
++                VarVec::SubtickMoves(f) => f.push(p),
++                _ => {}
++            },
+             None => self.push_none(),
+         }
+     }
+@@ -479,6 +515,7 @@ impl VarVec {
+             VarVec::U32Vec(f) => f.push(vec![]),
+             VarVec::Stickers(f) => f.push(vec![]),
+             VarVec::InputHistory(f) => f.push(vec![]),
++            VarVec::SubtickMoves(f) => f.push(vec![]),
+         }
+     }
+ }
+@@ -548,6 +585,13 @@ impl Serialize for Variant {
+                 }
+                 s.end()
+             }
++            Variant::SubtickMoves(v) => {
++                let mut s = serializer.serialize_seq(Some(v.len()))?;
++                for item in v {
++                    s.serialize_element(&item)?;
++                }
++                s.end()
++            }
+         }
+     }
+ }
+@@ -715,6 +759,10 @@ pub fn soa_to_aos(soa: OutputSerdeHelperStruct) -> Vec<std::collections::HashMap
+                         Some(f) => hm.insert(prop_info.prop_friendly_name.clone(), Some(Variant::InputHistory(f.clone()))),
+                         _ => hm.insert(prop_info.prop_friendly_name.clone(), None),
+                     },
++                    Some(VarVec::SubtickMoves(val)) => match val.get(idx) {
++                        Some(f) => hm.insert(prop_info.prop_friendly_name.clone(), Some(Variant::SubtickMoves(f.clone()))),
++                        _ => hm.insert(prop_info.prop_friendly_name.clone(), None),
++                    },
+                 };
+             }
+         }
+@@ -777,6 +825,9 @@ impl Serialize for OutputSerdeHelperStruct {
+                     Some(VarVec::InputHistory(val)) => {
+                         map.serialize_entry(&prop_info.prop_friendly_name, val)?;
+                     }
++                    Some(VarVec::SubtickMoves(val)) => {
++                        map.serialize_entry(&prop_info.prop_friendly_name, val)?;
++                    }
+                     Some(VarVec::U64Vec(val)) => {
+                         let string_sid = val
+                             .iter()
+diff --git a/src/python/Cargo.lock b/src/python/Cargo.lock
+index 2e62735..120edc2 100644
+--- a/src/python/Cargo.lock
++++ b/src/python/Cargo.lock
+@@ -299,7 +299,7 @@ dependencies = [
+ 
+ [[package]]
+ name = "demoparser2"
+-version = "0.40.2"
++version = "0.41.3"
+ dependencies = [
+  "ahash",
+  "csgoproto",
+diff --git a/src/python/src/lib.rs b/src/python/src/lib.rs
+index c950726..1e25619 100644
+--- a/src/python/src/lib.rs
++++ b/src/python/src/lib.rs
+@@ -859,6 +859,29 @@ impl DemoParser {
+                         df_column_names_py.push(prop_info.prop_friendly_name);
+                         all_pyobjects.push(dicts.into_py_any(py)?);
+                     }
++                    Some(VarVec::SubtickMoves(data)) => {
++                        let mut dicts = vec![];
++                        for moves in data {
++                            let mut v = vec![];
++                            for step in moves {
++                                let dict = PyDict::new(py);
++                                dict.set_item("when", step.when)?;
++                                dict.set_item("button", step.button)?;
++                                dict.set_item("pressed", step.pressed)?;
++                                dict.set_item(
++                                    "analog_forward_delta",
++                                    step.analog_forward_delta,
++                                )?;
++                                dict.set_item("analog_left_delta", step.analog_left_delta)?;
++                                dict.set_item("pitch_delta", step.pitch_delta)?;
++                                dict.set_item("yaw_delta", step.yaw_delta)?;
++                                v.push(dict);
++                            }
++                            dicts.push(v);
++                        }
++                        df_column_names_py.push(prop_info.prop_friendly_name);
++                        all_pyobjects.push(dicts.into_py_any(py)?);
++                    }
+                     _ => {}
+                 }
+             }
