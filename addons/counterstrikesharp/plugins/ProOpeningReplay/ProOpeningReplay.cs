@@ -442,7 +442,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (_config.ApplyLoadouts)
         {
-            ApplyLoadoutsForPendingAssignments();
+            ApplyLoadoutsForPendingAssignments(allowAfterFreezeEnd: true);
         }
 
         StartReplaySessions();
@@ -660,12 +660,12 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             }
             else
             {
-                AddTimer(delay, ApplyLoadoutsForPendingAssignments);
+                AddTimer(delay, () => ApplyLoadoutsForPendingAssignments());
             }
         }
         else if (_roundPrepared && !_config.ApplyLoadouts)
         {
-            PreloadPreparedOpeningReplayWeapons();
+            PreloadPreparedOpeningReplayWeapons(allowInventoryMutation: !_freezeEnded);
         }
     }
 
@@ -679,8 +679,13 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return keys.Count > 0 && keys.All(key => _pendingAssignments.ContainsKey(key));
     }
 
-    private void ApplyLoadoutsForPendingAssignments()
+    private void ApplyLoadoutsForPendingAssignments(bool allowAfterFreezeEnd = false)
     {
+        if (_freezeEnded && !allowAfterFreezeEnd)
+        {
+            return;
+        }
+
         if (_pendingAssignments.Count == 0)
         {
             return;
@@ -720,7 +725,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             RemoveUnownedReplayWeapons();
         }
 
-        PreloadPreparedOpeningReplayWeapons();
+        PreloadPreparedOpeningReplayWeapons(allowInventoryMutation: true);
     }
 
     private void CaptureRoundLoadoutBudgets()
@@ -2278,7 +2283,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
     }
 
-    private void PreloadPreparedOpeningReplayWeapons()
+    private void PreloadPreparedOpeningReplayWeapons(bool allowInventoryMutation)
     {
         if (_preparedOpeningSessions.Count == 0)
         {
@@ -2298,7 +2303,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 player,
                 prepared.ReplayPlayer,
                 prepared.Frames,
-                ReplaySessionKind.Opening);
+                ReplaySessionKind.Opening,
+                allowInventoryMutation);
         }
     }
 
@@ -2355,11 +2361,16 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (!session.ReplayWeaponsPreloaded)
         {
-            session.ReplayWeaponsPreloaded = PreloadReplayWeapons(
-                session.Player,
-                session.ReplayPlayer,
-                session.Frames,
-                session.Kind);
+            var allowInventoryMutation = session.Kind == ReplaySessionKind.Retake || !_freezeEnded;
+            if (allowInventoryMutation)
+            {
+                session.ReplayWeaponsPreloaded = PreloadReplayWeapons(
+                    session.Player,
+                    session.ReplayPlayer,
+                    session.Frames,
+                    session.Kind,
+                    allowInventoryMutation: true);
+            }
         }
 
         if (!session.NativeReplayPreloaded
@@ -2380,7 +2391,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         session.NativeReplayLastCursor = -1;
         session.NativeReplayStallTicks = 0;
         session.NativeReplayDiagnosticLogged = false;
-        ApplyReplayWeaponPreset(session, ChooseStartWeaponDef(session), allowSlotReplacement: true, force: true);
+        ApplyReplayWeaponPreset(session, ChooseStartWeaponDef(session), allowSlotReplacement: false, force: true);
         return true;
     }
 
@@ -2438,7 +2449,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         CCSPlayerController player,
         ReplayPlayer replayPlayer,
         List<ReplayFrame> frames,
-        ReplaySessionKind kind)
+        ReplaySessionKind kind,
+        bool allowInventoryMutation)
     {
         var slot = player.Slot;
         if (slot < 0)
@@ -2446,7 +2458,16 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return false;
         }
 
-        foreach (var defIndex in ReplayWeaponDefs(replayPlayer, frames))
+        if (!allowInventoryMutation)
+        {
+            return false;
+        }
+
+        var weaponDefs = kind == ReplaySessionKind.Retake
+            ? ReplayWeaponDefs(replayPlayer, frames)
+            : ReplayInitialLoadoutWeaponDefs(replayPlayer);
+
+        foreach (var defIndex in weaponDefs)
         {
             var normalized = NormalizeWeaponDefIndex(defIndex);
             if (!ShouldApplyReplayWeaponForSession(kind, normalized)
@@ -2460,7 +2481,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 slot,
                 normalized,
                 forceSwitch: false,
-                allowGive: true,
+                allowGive: allowInventoryMutation,
                 replaceConflictingSlot: false);
         }
 
@@ -2654,6 +2675,21 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         foreach (var defIndex in replayPlayer.PreloadWeaponDefIndexes)
+        {
+            yield return defIndex;
+        }
+
+        yield return replayPlayer.FirstWeaponDefIndex;
+
+        foreach (var item in replayPlayer.Inventory)
+        {
+            yield return WeaponDefIndex(item);
+        }
+    }
+
+    private static IEnumerable<int> ReplayInitialLoadoutWeaponDefs(ReplayPlayer replayPlayer)
+    {
+        foreach (var defIndex in replayPlayer.InventoryDefIndexes)
         {
             yield return defIndex;
         }
@@ -2994,10 +3030,10 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         {
             var weaponDefIndex = NormalizeWeaponDefIndex(tick.WeaponDefIndex);
             var isThrowableUtility = BotController.IsThrowableUtilityWeaponDef(weaponDefIndex);
-            ApplyReplayWeaponPreset(session, weaponDefIndex, allowSlotReplacement: true, force: false);
+            ApplyReplayWeaponPreset(session, weaponDefIndex, allowSlotReplacement: false, force: false);
             if (isThrowableUtility && !IsReplayWeaponActive(session.Player, weaponDefIndex))
             {
-                ApplyReplayWeaponPreset(session, weaponDefIndex, allowSlotReplacement: true, force: true);
+                ApplyReplayWeaponPreset(session, weaponDefIndex, allowSlotReplacement: false, force: true);
             }
 
             allowReplayAttack = isThrowableUtility && IsReplayWeaponActive(session.Player, weaponDefIndex);
@@ -3106,8 +3142,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             ? new CCSPlayer_ItemServices(pawn.ItemServices.Handle)
             : null;
 
-        StripAllWeapons(player);
-
         pawn.ArmorValue = replayPlayer.ArmorValue;
         Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_ArmorValue");
         if (itemServices != null)
@@ -3117,9 +3151,9 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         var targetItems = BuildReplayLoadoutItems(replayPlayer);
-        GiveTargetItemsDirect(player, targetItems, IsPrimaryWeapon);
-        GiveTargetItemsDirect(player, targetItems, IsSecondaryWeapon);
-        GiveTargetItemsDirect(player, targetItems, itemName => !IsPrimaryWeapon(itemName) && !IsSecondaryWeapon(itemName));
+        GiveMissingTargetItemsDirect(player, targetItems, IsPrimaryWeapon);
+        GiveMissingTargetItemsDirect(player, targetItems, IsSecondaryWeapon);
+        GiveMissingTargetItemsDirect(player, targetItems, itemName => !IsPrimaryWeapon(itemName) && !IsSecondaryWeapon(itemName));
         SwitchToReplayLoadoutStartWeapon(player, replayPlayer);
 
         var loadoutValue = ReplayLoadoutValue(replayPlayer);
@@ -3128,14 +3162,16 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return true;
     }
 
-    private static void GiveTargetItemsDirect(
+    private static void GiveMissingTargetItemsDirect(
         CCSPlayerController player,
         Dictionary<string, int> targetItems,
         Func<string, bool> predicate)
     {
+        var currentItems = CountItems(GetCurrentInventory(player).Select(NormalizeLoadoutItem));
         foreach (var (itemName, targetCount) in targetItems.Where(pair => predicate(pair.Key)).ToList())
         {
-            for (var i = 0; i < targetCount; i++)
+            var missingCount = Math.Max(0, targetCount - currentItems.GetValueOrDefault(itemName));
+            for (var i = 0; i < missingCount; i++)
             {
                 player.GiveNamedItem(itemName);
             }
@@ -4391,7 +4427,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             .Select(NormalizeLoadoutItem)
             .Where(IsReplayLoadoutItem));
         MergeReplayLoadoutDefs(targetItems, replayPlayer.InventoryDefIndexes);
-        MergeReplayLoadoutDefs(targetItems, replayPlayer.PreloadWeaponDefIndexes);
         MergeReplayLoadoutDefs(targetItems, [replayPlayer.FirstWeaponDefIndex]);
 
         if (!targetItems.Keys.Any(itemName => SecondaryWeapons.Contains(itemName)))
