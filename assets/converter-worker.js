@@ -5,8 +5,6 @@ importScripts("../vendor/demoparser/demoparser2.js", "./cs2rec-writer.js");
 const BROTLI_MODULE = "https://cdn.jsdelivr.net/npm/brotli-wasm@3.0.1/index.web.js";
 const FFLATE_MODULE = "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js";
 const WASM_PATH = new URL("../vendor/demoparser/demoparser2_bg.wasm", self.location.href).href;
-const DEFAULT_ECONOMY_SAMPLE_SECONDS = 2;
-
 const WANTED_PROPS = unique([
   "X",
   "Y",
@@ -117,6 +115,7 @@ async function convert(file, rawOptions) {
   }
   progress("Reading demo events", 0, 1);
   const freezeEvents = parseEventSafe(bytes, "round_freeze_end");
+  const roundStartEvents = parseEventSafe(bytes, "round_start");
   const roundEndEvents = parseEventSafe(bytes, "round_end");
   const plantEvents = parseEventSafe(bytes, "bomb_planted");
   const freezeTicks = sortedUniqueTicks(freezeEvents);
@@ -124,7 +123,7 @@ async function convert(file, rawOptions) {
     throw new Error("No round_freeze_end events found. This demo cannot be converted into opening routes.");
   }
 
-  const segments = buildSegments(freezeTicks, roundEndEvents, plantEvents, options);
+  const segments = buildSegments(freezeTicks, roundStartEvents, roundEndEvents, plantEvents, options);
   const totalWantedTicks = segments.reduce((sum, segment) => sum + segment.ticks.length, 0);
   log(`Found ${segments.length} rounds on ${mapName}; parsing ${totalWantedTicks.toLocaleString()} demo ticks.`);
 
@@ -145,7 +144,7 @@ async function convert(file, rawOptions) {
   progress("Building player routes", 0, allRows.length);
   const buildResult = buildDataset(file.name, mapName, segments, allRows, options);
   if (!buildResult.entries.length) {
-    throw new Error("No replay routes were produced. The demo may not contain alive players on T/CT after freeze end.");
+    throw new Error("No replay routes were produced. The demo may not contain alive players on T/CT in the selected round windows.");
   }
 
   progress("Compressing cs2rec bundle", 0, buildResult.entries.length);
@@ -230,15 +229,13 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
   let processedRows = 0;
   for (const segment of segments) {
     const roundRows = (rowsBySegment.get(segment.freezeTick) || [])
-      .filter(row => roundNumberMatches(row, segment.roundNumber))
       .filter(isPlayableRow)
       .sort((left, right) => intValue(get(left, "tick"), 0) - intValue(get(right, "tick"), 0));
     if (!roundRows.length) {
       continue;
     }
 
-    const activeRows = activeRoundRows(roundRows);
-    const replayRows = activeRows.length ? activeRows : roundRows;
+    const replayRows = roundRows;
     const economyRows = sampleRoundRowsAtTick(replayRows, segment.economySampleTick);
     const freezeRows = sampleRoundRowsAtTick(roundRows, segment.freezeTick);
     const slotBySteamId = directSlotMap(freezeRows.length ? freezeRows : replayRows);
@@ -262,8 +259,7 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
       }
 
       const frames = inferFrameSequence(playerRows
-        .map(row => directFrameFromRow(row, segment.freezeTick, options.tickrate))
-        .filter(frame => intValue(frame.relativeTick, -1) >= 0), options.tickrate);
+        .map(row => directFrameFromRow(row, segment.freezeTick, options.tickrate)), options.tickrate);
       if (frames.length < 2) {
         continue;
       }
@@ -296,6 +292,10 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
       entries.push(entry);
       const info = CS2RecWriter.routeSegmentInfo(route, entry.weaponDefs);
       const retake = buildRetakeInfo(frames, segment);
+      let freezeEndIndex = frames.findIndex(frame => intValue(frame.tick, 0) >= segment.freezeTick);
+      if (freezeEndIndex < 0) {
+        freezeEndIndex = 0;
+      }
       const playerPayload = {
         steamId,
         name: route.playerName,
@@ -303,17 +303,20 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
         slot: intValue(slotBySteamId.get(steamId), 0),
         startBalance: intValue(get(baseline, "balance"), 0),
         balance: intValue(get(baseline, "balance"), 0),
-        economySampleRelativeTick: Math.max(0, segment.economySampleTick - segment.freezeTick),
-        economySampleTime: roundFloat(Math.max(0, segment.economySampleTick - segment.freezeTick) / options.tickrate, 4),
+        economySampleRelativeTick: segment.economySampleTick - segment.freezeTick,
+        economySampleTime: roundFloat((segment.economySampleTick - segment.freezeTick) / options.tickrate, 4),
         equipmentValue: intValue(firstDefined(get(baseline, "current_equip_value"), get(baseline, "round_start_equip_value")), 0),
         armorValue: intValue(get(baseline, "armor_value"), 0),
         hasHelmet: boolValue(get(baseline, "has_helmet")),
         hasDefuser: boolValue(get(baseline, "has_defuser")),
         inventory: normalizeInventory(get(baseline, "inventory")),
         inventoryDefIndexes: normalizeInventoryDefIndexes(get(baseline, "inventory_as_ids")),
+        freezeInventorySnapshots: buildFreezeInventorySnapshots(playerRows, segment, options.tickrate),
         recPath: bundlePath,
         recKey,
         duration: roundFloat(info.duration, 4),
+        freezeEndTickIndex: Math.max(0, freezeEndIndex),
+        freezeEndTime: roundFloat((segment.freezeTick - segment.roundStartTick) / options.tickrate, 4),
         firstWeaponDefIndex: info.firstWeaponDefIndex,
         preloadWeaponDefIndexes: info.preloadWeaponDefIndexes,
         startFrame: info.startFrame,
@@ -333,9 +336,12 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
         id: roundKey,
         demoPath: sourceName,
         roundNumber: segment.roundNumber,
+        freezeStartTick: segment.roundStartTick,
         freezeEndTick: segment.freezeTick,
-        economySampleRelativeTick: Math.max(0, segment.economySampleTick - segment.freezeTick),
-        economySampleTime: roundFloat(Math.max(0, segment.economySampleTick - segment.freezeTick) / options.tickrate, 4),
+        freezeTimeTicks: Math.max(0, segment.freezeTick - segment.roundStartTick),
+        freezeTime: roundFloat(Math.max(0, segment.freezeTick - segment.roundStartTick) / options.tickrate, 4),
+        economySampleRelativeTick: segment.economySampleTick - segment.freezeTick,
+        economySampleTime: roundFloat((segment.economySampleTick - segment.freezeTick) / options.tickrate, 4),
         teamEconomies: directTeamEconomies(economyRows.length ? economyRows : freezeRows),
         players: players.sort((left, right) => (left.teamNum - right.teamNum) || (left.slot - right.slot))
       };
@@ -363,11 +369,14 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
   };
 }
 
-function buildSegments(freezeTicks, roundEndEvents, plantEvents, options) {
+function buildSegments(freezeTicks, roundStartEvents, roundEndEvents, plantEvents, options) {
+  const roundStarts = sortedUniqueTicks(roundStartEvents);
   const roundEnds = sortedUniqueTicks(roundEndEvents);
   const maxRoundTicks = Math.max(1, options.maxRoundSeconds * options.tickrate);
   return freezeTicks.map((freezeTick, index) => {
+    const previousFreezeTick = index > 0 ? freezeTicks[index - 1] : null;
     const nextFreezeTick = index + 1 < freezeTicks.length ? freezeTicks[index + 1] : null;
+    const roundStartTick = findRoundStartTick(roundStarts, freezeTick, previousFreezeTick) ?? freezeTick;
     let roundEndTick = firstTickInWindow(roundEnds, freezeTick, nextFreezeTick);
     if (roundEndTick === null) {
       roundEndTick = nextFreezeTick !== null ? nextFreezeTick - 1 : freezeTick + maxRoundTicks;
@@ -375,14 +384,17 @@ function buildSegments(freezeTicks, roundEndEvents, plantEvents, options) {
     roundEndTick = Math.min(roundEndTick, freezeTick + maxRoundTicks);
     const plantEvent = firstEventInWindow(plantEvents, freezeTick, nextFreezeTick);
     const plantTick = plantEvent ? intValue(get(plantEvent, "tick"), -1) : null;
-    const economySampleTick = Math.min(roundEndTick, freezeTick + Math.round(DEFAULT_ECONOMY_SAMPLE_SECONDS * options.tickrate));
+    const economySampleTick = Math.max(roundStartTick, freezeTick - 1);
     const tickSet = new Set();
-    for (let tick = freezeTick; tick <= roundEndTick; tick++) {
+    for (let tick = roundStartTick; tick <= roundEndTick; tick++) {
       tickSet.add(tick);
     }
+    tickSet.add(roundStartTick);
+    tickSet.add(freezeTick);
     tickSet.add(economySampleTick);
     return {
       roundNumber: index,
+      roundStartTick,
       freezeTick,
       nextFreezeTick,
       roundEndTick,
@@ -655,6 +667,20 @@ function firstTickInWindow(ticks, start, endExclusive) {
   return null;
 }
 
+function findRoundStartTick(roundStarts, freezeTick, previousFreezeTick) {
+  let best = null;
+  for (const tick of roundStarts) {
+    if (tick > freezeTick) {
+      break;
+    }
+    if (previousFreezeTick !== null && tick <= previousFreezeTick) {
+      continue;
+    }
+    best = tick;
+  }
+  return best;
+}
+
 function firstEventInWindow(events, start, endExclusive) {
   return events
     .filter(event => {
@@ -691,8 +717,8 @@ function sampleRoundRowsAtTick(rows, sampleTick) {
 
 function samplePlayerRow(rows, sampleTick, fallbackRows = []) {
   const sorted = [...rows].sort((left, right) => intValue(get(left, "tick"), 0) - intValue(get(right, "tick"), 0));
-  return sorted.find(row => intValue(get(row, "tick"), 0) >= sampleTick) ||
-    [...sorted].reverse().find(row => intValue(get(row, "tick"), 0) <= sampleTick) ||
+  return [...sorted].reverse().find(row => intValue(get(row, "tick"), 0) <= sampleTick) ||
+    sorted.find(row => intValue(get(row, "tick"), 0) >= sampleTick) ||
     sorted[0] ||
     fallbackRows[0] ||
     null;
@@ -771,6 +797,103 @@ function normalizeInventoryDefIndexes(raw) {
   return raw
     .map(value => CS2RecWriter.normalizeWeaponDefIndex(intValue(value, -1)))
     .filter(value => value >= 0);
+}
+
+function buildFreezeInventorySnapshots(playerRows, segment, tickrate) {
+  const rows = dedupeByTick(playerRows
+    .filter(row => {
+      const tick = intValue(get(row, "tick"), -1);
+      return tick >= segment.roundStartTick && tick <= segment.freezeTick;
+    }))
+    .sort((left, right) => intValue(get(left, "tick"), 0) - intValue(get(right, "tick"), 0));
+
+  const snapshots = [];
+  let previousItems = null;
+  let previousDefs = null;
+  for (const row of rows) {
+    if (!hasInventorySnapshot(row)) {
+      continue;
+    }
+
+    const tick = intValue(get(row, "tick"), 0);
+    const items = countValues(normalizeInventory(get(row, "inventory")));
+    const defs = countValues(normalizeInventoryDefIndexes(get(row, "inventory_as_ids")));
+    const payload = freezeInventoryTickPayload(tick, segment.freezeTick, tickrate);
+
+    if (!previousItems || !previousDefs) {
+      payload.inventory = expandCounter(items);
+      payload.inventoryDefIndexes = expandCounter(defs);
+      snapshots.push(payload);
+    } else {
+      const added = expandCounter(counterDifference(items, previousItems));
+      const removed = expandCounter(counterDifference(previousItems, items));
+      const addedDefIndexes = expandCounter(counterDifference(defs, previousDefs));
+      const removedDefIndexes = expandCounter(counterDifference(previousDefs, defs));
+      if (added.length || removed.length || addedDefIndexes.length || removedDefIndexes.length) {
+        if (added.length) payload.added = added;
+        if (removed.length) payload.removed = removed;
+        if (addedDefIndexes.length) payload.addedDefIndexes = addedDefIndexes;
+        if (removedDefIndexes.length) payload.removedDefIndexes = removedDefIndexes;
+        snapshots.push(payload);
+      }
+    }
+
+    previousItems = items;
+    previousDefs = defs;
+  }
+
+  return snapshots;
+}
+
+function hasInventorySnapshot(row) {
+  return get(row, "inventory") !== undefined || get(row, "inventory_as_ids") !== undefined;
+}
+
+function freezeInventoryTickPayload(tick, freezeTick, tickrate) {
+  const relativeTick = tick - freezeTick;
+  return {
+    tick,
+    relativeTick,
+    time: roundFloat(relativeTick / tickrate, 4)
+  };
+}
+
+function countValues(values) {
+  const counter = new Map();
+  for (const value of values) {
+    counter.set(value, (counter.get(value) || 0) + 1);
+  }
+  return counter;
+}
+
+function counterDifference(left, right) {
+  const output = new Map();
+  for (const [key, count] of left.entries()) {
+    const delta = count - (right.get(key) || 0);
+    if (delta > 0) {
+      output.set(key, delta);
+    }
+  }
+  return output;
+}
+
+function expandCounter(counter) {
+  const values = [];
+  for (const [key, count] of [...counter.entries()].sort(compareCounterEntries)) {
+    for (let index = 0; index < count; index++) {
+      values.push(key);
+    }
+  }
+  return values;
+}
+
+function compareCounterEntries(left, right) {
+  const a = left[0];
+  const b = right[0];
+  if (typeof a === "number" && typeof b === "number") {
+    return a - b;
+  }
+  return String(a).localeCompare(String(b));
 }
 
 const WEAPON_VALUES = new Map([
