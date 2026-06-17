@@ -352,9 +352,11 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
   return {
     entries,
     manifest: {
+      format: "pro_opening_replay_cs2rec_v4",
       mapName,
-      generatedAt: new Date().toISOString(),
-      format: "cs2rec-v4-browser",
+      tickRate: options.tickrate,
+      cs2recVersion: 4,
+      transformDownsample: options.downsample,
       rounds
     }
   };
@@ -536,21 +538,19 @@ function directTeamEconomies(rows) {
       continue;
     }
     const totalStartBalance = sum(teamRows, row => intValue(get(row, "balance"), 0));
-    const totalEquipmentValue = sum(teamRows, row => intValue(firstDefined(get(row, "current_equip_value"), get(row, "round_start_equip_value")), 0));
-    const totalArmorValue = sum(teamRows, row => intValue(get(row, "armor_value"), 0));
-    const totalUtilityValue = sum(teamRows, row => inventoryUtilityValue(get(row, "inventory"), get(row, "inventory_as_ids")));
-    const totalPrimaryValue = sum(teamRows, row => inventoryPrimaryValue(get(row, "inventory"), get(row, "inventory_as_ids")));
+    const totalEquipmentValue = sum(teamRows, row => intValue(get(row, "current_equip_value"), 0));
+    const equipment = summarizeEquipment(teamRows);
     payloads.push({
       teamNum,
-      teamName: String(firstDefined(get(teamRows[0], "team_clan_name"), "") || ""),
+      teamName: String(firstDefined(get(teamRows[0], "team_clan_name"), teamLabel(teamNum)) || teamLabel(teamNum)),
       playerCount: teamRows.length,
       totalStartBalance,
-      averageStartBalance: Math.round(totalStartBalance / Math.max(1, teamRows.length)),
+      averageStartBalance: Math.trunc(totalStartBalance / Math.max(1, teamRows.length)),
       totalEquipmentValue,
-      totalPrimaryValue,
-      totalUtilityValue,
-      totalArmorValue,
-      totalCashEquipmentValue: totalStartBalance + totalEquipmentValue
+      totalPrimaryValue: equipment.primaryValue,
+      totalUtilityValue: equipment.utilityValue,
+      totalArmorValue: equipment.armorValue,
+      totalCashEquipmentValue: totalStartBalance + Math.max(totalEquipmentValue, equipment.totalValue)
     });
   }
   return payloads.sort((left, right) => left.teamNum - right.teamNum);
@@ -763,7 +763,9 @@ function normalizeInventoryDefIndexes(raw) {
   if (!Array.isArray(raw)) {
     return [];
   }
-  return raw.map(value => intValue(value, -1)).filter(value => value >= 0);
+  return raw
+    .map(value => CS2RecWriter.normalizeWeaponDefIndex(intValue(value, -1)))
+    .filter(value => value >= 0);
 }
 
 const WEAPON_VALUES = new Map([
@@ -776,6 +778,68 @@ const WEAPON_VALUES = new Map([
 ]);
 const PRIMARY_DEFS = new Set([7, 8, 9, 10, 11, 13, 14, 16, 17, 19, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 38, 39, 40, 60]);
 const UTILITY_DEFS = new Set([43, 44, 45, 46, 47, 48]);
+const PRIMARY_ITEMS = new Set([
+  "weapon_ak47", "weapon_aug", "weapon_awp", "weapon_famas", "weapon_g3sg1",
+  "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_sg556",
+  "weapon_ssg08", "weapon_scar20", "weapon_mac10", "weapon_mp5sd",
+  "weapon_mp7", "weapon_mp9", "weapon_bizon", "weapon_p90", "weapon_ump45",
+  "weapon_mag7", "weapon_nova", "weapon_sawedoff", "weapon_xm1014",
+  "weapon_m249", "weapon_negev"
+]);
+const UTILITY_ITEMS = new Set([
+  "weapon_flashbang", "weapon_hegrenade", "weapon_smokegrenade",
+  "weapon_molotov", "weapon_incgrenade", "weapon_decoy", "weapon_taser"
+]);
+const ITEM_PRICES = new Map([
+  ["item_kevlar", 650], ["item_assaultsuit", 1000], ["item_defuser", 400],
+  ["weapon_taser", 200], ["weapon_elite", 300], ["weapon_p250", 300],
+  ["weapon_tec9", 500], ["weapon_fiveseven", 500], ["weapon_deagle", 700],
+  ["weapon_cz75a", 500], ["weapon_revolver", 600], ["weapon_mac10", 1050],
+  ["weapon_mp9", 1250], ["weapon_mp7", 1500], ["weapon_mp5sd", 1500],
+  ["weapon_ump45", 1200], ["weapon_bizon", 1400], ["weapon_p90", 2350],
+  ["weapon_nova", 1050], ["weapon_xm1014", 2000], ["weapon_sawedoff", 1100],
+  ["weapon_mag7", 1300], ["weapon_galilar", 1800], ["weapon_ak47", 2700],
+  ["weapon_sg556", 3000], ["weapon_famas", 1950], ["weapon_m4a1", 2900],
+  ["weapon_m4a1_silencer", 2900], ["weapon_aug", 3300], ["weapon_ssg08", 1700],
+  ["weapon_awp", 4750], ["weapon_scar20", 5000], ["weapon_g3sg1", 5000],
+  ["weapon_negev", 1700], ["weapon_m249", 5200], ["weapon_flashbang", 200],
+  ["weapon_hegrenade", 300], ["weapon_smokegrenade", 300],
+  ["weapon_molotov", 400], ["weapon_incgrenade", 500], ["weapon_decoy", 50]
+]);
+
+function summarizeEquipment(rows) {
+  let primaryValue = 0;
+  let utilityValue = 0;
+  let armorValue = 0;
+  let totalValue = 0;
+
+  for (const row of rows) {
+    for (const itemName of normalizeInventory(get(row, "inventory"))) {
+      const price = ITEM_PRICES.get(itemName) || 0;
+      totalValue += price;
+      if (PRIMARY_ITEMS.has(itemName)) {
+        primaryValue += price;
+      } else if (UTILITY_ITEMS.has(itemName)) {
+        utilityValue += price;
+      }
+    }
+
+    if (intValue(get(row, "armor_value"), 0) > 0) {
+      const armorPrice = boolValue(get(row, "has_helmet")) ? 1000 : 650;
+      armorValue += armorPrice;
+      totalValue += armorPrice;
+    }
+    if (boolValue(get(row, "has_defuser"))) {
+      totalValue += ITEM_PRICES.get("item_defuser") || 0;
+    }
+  }
+
+  return { primaryValue, utilityValue, armorValue, totalValue };
+}
+
+function teamLabel(teamNum) {
+  return teamNum === 2 ? "T" : teamNum === 3 ? "CT" : "";
+}
 
 function inventoryPrimaryValue(inventory, inventoryDefs) {
   return inventoryDefIndexes(inventory, inventoryDefs)
@@ -802,6 +866,7 @@ function normalizeItem(value) {
   if (!raw) return "";
   const alias = WEAPON_ALIASES.get(raw);
   if (alias) return alias;
+  if (raw === "weapon_galil_ar") return "weapon_galilar";
   if (raw.startsWith("weapon_") || raw.startsWith("item_")) return raw;
   return `weapon_${raw.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")}`;
 }
@@ -813,6 +878,9 @@ const WEAPON_ALIASES = new Map([
   ["dual berettas", "weapon_elite"],
   ["five-seven", "weapon_fiveseven"],
   ["glock-18", "weapon_glock"],
+  ["galil ar", "weapon_galilar"],
+  ["galil-ar", "weapon_galilar"],
+  ["galilar", "weapon_galilar"],
   ["he grenade", "weapon_hegrenade"],
   ["high explosive grenade", "weapon_hegrenade"],
   ["incendiary grenade", "weapon_incgrenade"],
@@ -837,7 +905,7 @@ function normalizeOptions(options) {
   return {
     tickrate: clamp(intValue(options.tickrate, 64), 16, 256),
     downsample: clamp(intValue(options.downsample, 4), 1, 16),
-    maxRoundSeconds: clamp(intValue(options.maxRoundSeconds, 115), 15, 300)
+    maxRoundSeconds: clamp(intValue(options.maxRoundSeconds, 160), 15, 300)
   };
 }
 

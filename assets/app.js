@@ -76,7 +76,7 @@ function startConversion(file) {
     options: {
       tickrate: readPositiveInt(tickrateInput.value, 64),
       downsample: readPositiveInt(downsampleInput.value, 4),
-      maxRoundSeconds: readPositiveInt(maxRoundSecondsInput.value, 115)
+      maxRoundSeconds: readPositiveInt(maxRoundSecondsInput.value, 160)
     }
   });
 }
