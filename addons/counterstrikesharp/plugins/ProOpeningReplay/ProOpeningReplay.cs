@@ -377,7 +377,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         LoadConfig();
         BotController.ResetCompatibility();
         _nativeReplayAvailable = BotController.IsCompatible();
-        ApplyNativeBuySuppression();
+        ApplyNativeBuySuppressionForPendingAssignments();
         _nativeReplayPreloadKeys.Clear();
         _preparedOpeningSessions.Clear();
         LoadDataset();
@@ -408,7 +408,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         ClearNativeWeaponState();
         _roundPrepared = false;
         _freezeEnded = false;
-        ApplyNativeBuySuppression();
         CaptureRoundLoadoutBudgets();
 
         // Cache bombsite centers for the "T entered the bombsite" opening end-condition. func_bomb_target
@@ -422,6 +421,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (!CanUseDataset())
         {
+            ClearNativeBuySuppression();
             return HookResult.Continue;
         }
 
@@ -625,7 +625,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (_loadoutAppliedKeys.Count == 0)
         {
-            ApplyNativeBuySuppression();
             CaptureRoundLoadoutBudgets();
         }
 
@@ -652,6 +651,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         _roundPrepared = _pendingAssignments.Count > 0;
+        if (_roundPrepared)
+        {
+            ApplyNativeBuySuppressionForPendingAssignments();
+        }
+        else
+        {
+            ClearNativeBuySuppression();
+        }
         PrepareOpeningSessionsForPendingAssignments();
 
         // Apply the target loadout after matching. Native bot buying is suppressed before the budget
@@ -733,7 +740,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         PreloadPreparedOpeningReplayWeapons(allowInventoryMutation: true);
     }
 
-    private void ApplyNativeBuySuppression()
+    private void ApplyNativeBuySuppressionForPendingAssignments()
     {
         if (!_config.SuppressNativeBotBuying || !_nativeReplayAvailable)
         {
@@ -752,7 +759,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         foreach (var player in players.Where(IsNativeBuySuppressionTarget))
         {
-            BotController.SetBuySkip(player.Slot);
+            if (_pendingAssignments.ContainsKey(PlayerKey(player)))
+            {
+                BotController.SetBuySkip(player.Slot);
+            }
+            else
+            {
+                BotController.ClearBuyPlan(player.Slot);
+            }
         }
     }
 
@@ -4209,6 +4223,10 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                     _dataset = dataset;
                     BuildRoundIndexes();
                     StartReplayBundlePrewarm();
+                    if (!_freezeEnded && !_roundPrepared && _roundLoadoutBudgets.Count > 0)
+                    {
+                        ScheduleFreezePrepareAttempts();
+                    }
                 });
             }
             catch (Exception exception)
@@ -5437,24 +5455,28 @@ public sealed class SpawnReplayIndex(int teamNum)
             .ToList();
         var teamBudget = orderedBots.Sum(bot => bot.Budget);
 
-        var players = round.Players
-            .Where(player => !IsHumanOccupied(player.Spawn, humanOccupiedSpawns, humanSpawnBlockRadius))
+        var allPlayers = round.Players
             .Select(player => new
             {
                 Entry = player,
-                LoadoutValue = ProOpeningReplayPlugin.ReplayLoadoutValue(player.Player)
+                LoadoutValue = ProOpeningReplayPlugin.ReplayLoadoutValue(player.Player),
+                HumanBlocked = IsHumanOccupied(player.Spawn, humanOccupiedSpawns, humanSpawnBlockRadius)
             })
-            .OrderBy(player => player.LoadoutValue)
-            .ThenBy(player => player.Entry.Player.SteamId, StringComparer.Ordinal)
-            .Take(orderedBots.Count)
+            .ToList();
+        var players = allPlayers
+            .Where(player => !player.HumanBlocked)
             .ToList();
         if (players.Count < orderedBots.Count)
         {
-            return null;
+            players = allPlayers;
         }
 
-        var teamLoadoutValue = players.Sum(player => player.LoadoutValue);
-        if (teamLoadoutValue > teamBudget)
+        players = players
+            .OrderBy(player => player.HumanBlocked ? 1 : 0)
+            .ThenBy(player => player.LoadoutValue)
+            .ThenBy(player => player.Entry.Player.SteamId, StringComparer.Ordinal)
+            .ToList();
+        if (players.Count < orderedBots.Count)
         {
             return null;
         }
