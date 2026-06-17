@@ -1,4 +1,4 @@
-const CACHE_NAME = "cs2rec-converter-v1";
+const CACHE_NAME = "cs2rec-converter-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -32,15 +32,18 @@ self.addEventListener("fetch", event => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(event.request);
-    if (cached) {
-      return cached;
+    try {
+      const response = await fetch(event.request);
+      if (response.ok) {
+        cache.put(event.request, response.clone()).catch(() => {});
+      }
+      return response;
+    } catch (error) {
+      const cached = await cache.match(event.request);
+      if (cached) {
+        return cached;
+      }
+      throw error;
     }
-
-    const response = await fetch(event.request);
-    if (response.ok) {
-      cache.put(event.request, response.clone()).catch(() => {});
-    }
-    return response;
   })());
 });

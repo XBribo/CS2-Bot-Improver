@@ -118,7 +118,7 @@ async function convert(file, rawOptions) {
   progress("Reading demo events", 0, 1);
   const freezeEvents = parseEventSafe(bytes, "round_freeze_end");
   const roundEndEvents = parseEventSafe(bytes, "round_end");
-  const plantEvents = parseEventSafe(bytes, "bomb_planted", ["player_steamid", "X", "Y", "Z"]);
+  const plantEvents = parseEventSafe(bytes, "bomb_planted");
   const freezeTicks = sortedUniqueTicks(freezeEvents);
   if (!freezeTicks.length) {
     throw new Error("No round_freeze_end events found. This demo cannot be converted into opening routes.");
@@ -621,10 +621,18 @@ function plantPosition(segment, rows, options) {
   return { x: roundFloat(frame.x), y: roundFloat(frame.y), z: roundFloat(frame.z) };
 }
 
-function parseEventSafe(bytes, eventName, wantedPlayerProps = []) {
+function parseEventSafe(bytes, eventName, wantedPlayerProps = null) {
   try {
-    return arrayOfObjects(wasm_bindgen.parseEvent(bytes, eventName, wantedPlayerProps, []));
+    return arrayOfObjects(wasm_bindgen.parseEvent(bytes, eventName, wantedPlayerProps, null));
   } catch (error) {
+    if (wantedPlayerProps) {
+      try {
+        return arrayOfObjects(wasm_bindgen.parseEvent(bytes, eventName, null, null));
+      } catch (fallbackError) {
+        log(`Could not parse ${eventName}: ${(fallbackError && fallbackError.message) || fallbackError}`);
+        return [];
+      }
+    }
     log(`Could not parse ${eventName}: ${(error && error.message) || error}`);
     return [];
   }
