@@ -116,6 +116,25 @@ let wasm_bindgen;
         return ptr;
     }
 
+    function takeFromExternrefTable0(idx) {
+        const value = wasm.__wbindgen_export_4.get(idx);
+        wasm.__externref_table_dealloc(idx);
+        return value;
+    }
+    /**
+     * @param {Uint8Array} fileBytes
+     * @returns {any}
+     */
+    __exports.listUpdatedFields = function(fileBytes) {
+        const ptr0 = passArray8ToWasm0(fileBytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.listUpdatedFields(ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    };
+
     function passArrayJsValueToWasm0(array, malloc) {
         const ptr = malloc(array.length * 4, 4) >>> 0;
         for (let i = 0; i < array.length; i++) {
@@ -125,12 +144,26 @@ let wasm_bindgen;
         WASM_VECTOR_LEN = array.length;
         return ptr;
     }
+    /**
+     * extra: lets you add new fields to grenades. Use list_updated_fields for a full list.
+     * grenades: lets you disable non-projectile grenades. This can have a big difference on memory/speed.
+     * @param {Uint8Array} file
+     * @param {any[] | null} [extra]
+     * @param {boolean | null} [grenades]
+     * @returns {any}
+     */
+    __exports.parseGrenades = function(file, extra, grenades) {
+        const ptr0 = passArray8ToWasm0(file, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        var ptr1 = isLikeNone(extra) ? 0 : passArrayJsValueToWasm0(extra, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        const ret = wasm.parseGrenades(ptr0, len0, ptr1, len1, isLikeNone(grenades) ? 0xFFFFFF : grenades ? 1 : 0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    };
 
-    function takeFromExternrefTable0(idx) {
-        const value = wasm.__wbindgen_export_4.get(idx);
-        wasm.__externref_table_dealloc(idx);
-        return value;
-    }
     /**
      * @param {Uint8Array} file
      * @param {string | null} [event_name]
@@ -148,57 +181,6 @@ let wasm_bindgen;
         var ptr3 = isLikeNone(wanted_other_props) ? 0 : passArrayJsValueToWasm0(wanted_other_props, wasm.__wbindgen_malloc);
         var len3 = WASM_VECTOR_LEN;
         const ret = wasm.parseEvent(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
-        if (ret[2]) {
-            throw takeFromExternrefTable0(ret[1]);
-        }
-        return takeFromExternrefTable0(ret[0]);
-    };
-
-    /**
-     * @param {Uint8Array} file
-     * @param {any[] | null} [event_names]
-     * @param {any[] | null} [wanted_player_props]
-     * @param {any[] | null} [wanted_other_props]
-     * @returns {any}
-     */
-    __exports.parseEvents = function(file, event_names, wanted_player_props, wanted_other_props) {
-        const ptr0 = passArray8ToWasm0(file, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        var ptr1 = isLikeNone(event_names) ? 0 : passArrayJsValueToWasm0(event_names, wasm.__wbindgen_malloc);
-        var len1 = WASM_VECTOR_LEN;
-        var ptr2 = isLikeNone(wanted_player_props) ? 0 : passArrayJsValueToWasm0(wanted_player_props, wasm.__wbindgen_malloc);
-        var len2 = WASM_VECTOR_LEN;
-        var ptr3 = isLikeNone(wanted_other_props) ? 0 : passArrayJsValueToWasm0(wanted_other_props, wasm.__wbindgen_malloc);
-        var len3 = WASM_VECTOR_LEN;
-        const ret = wasm.parseEvents(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
-        if (ret[2]) {
-            throw takeFromExternrefTable0(ret[1]);
-        }
-        return takeFromExternrefTable0(ret[0]);
-    };
-
-    /**
-     * @param {Uint8Array} fileBytes
-     * @returns {any}
-     */
-    __exports.listGameEvents = function(fileBytes) {
-        const ptr0 = passArray8ToWasm0(fileBytes, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.listGameEvents(ptr0, len0);
-        if (ret[2]) {
-            throw takeFromExternrefTable0(ret[1]);
-        }
-        return takeFromExternrefTable0(ret[0]);
-    };
-
-    /**
-     * @param {Uint8Array} fileBytes
-     * @returns {any}
-     */
-    __exports.listUpdatedFields = function(fileBytes) {
-        const ptr0 = passArray8ToWasm0(fileBytes, wasm.__wbindgen_malloc);
-        const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.listUpdatedFields(ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -246,12 +228,35 @@ let wasm_bindgen;
 
     /**
      * @param {Uint8Array} file
+     * @param {any[] | null} [event_names]
+     * @param {any[] | null} [wanted_player_props]
+     * @param {any[] | null} [wanted_other_props]
      * @returns {any}
      */
-    __exports.parseGrenades = function(file) {
+    __exports.parseEvents = function(file, event_names, wanted_player_props, wanted_other_props) {
         const ptr0 = passArray8ToWasm0(file, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.parseGrenades(ptr0, len0);
+        var ptr1 = isLikeNone(event_names) ? 0 : passArrayJsValueToWasm0(event_names, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        var ptr2 = isLikeNone(wanted_player_props) ? 0 : passArrayJsValueToWasm0(wanted_player_props, wasm.__wbindgen_malloc);
+        var len2 = WASM_VECTOR_LEN;
+        var ptr3 = isLikeNone(wanted_other_props) ? 0 : passArrayJsValueToWasm0(wanted_other_props, wasm.__wbindgen_malloc);
+        var len3 = WASM_VECTOR_LEN;
+        const ret = wasm.parseEvents(ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+    };
+
+    /**
+     * @param {Uint8Array} fileBytes
+     * @returns {any}
+     */
+    __exports.listGameEvents = function(fileBytes) {
+        const ptr0 = passArray8ToWasm0(fileBytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.listGameEvents(ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
@@ -414,6 +419,10 @@ let wasm_bindgen;
         };
         imports.wbg.__wbg_versions_c71aa1626a93e0a1 = function(arg0) {
             const ret = arg0.versions;
+            return ret;
+        };
+        imports.wbg.__wbindgen_bigint_from_u64 = function(arg0) {
+            const ret = BigInt.asUintN(64, arg0);
             return ret;
         };
         imports.wbg.__wbindgen_error_new = function(arg0, arg1) {

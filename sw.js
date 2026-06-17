@@ -1,4 +1,4 @@
-const CACHE_NAME = "cs2rec-converter-v2";
+const CACHE_NAME = "cs2rec-converter-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
