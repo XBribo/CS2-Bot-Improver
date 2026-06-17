@@ -1,0 +1,216 @@
+:root {
+  color-scheme: dark;
+  --bg: #101418;
+  --panel: #171d22;
+  --panel-2: #1f272d;
+  --text: #edf2f7;
+  --muted: #9aa8b4;
+  --line: #2d3943;
+  --green: #68d391;
+  --orange: #f6ad55;
+  --blue: #63b3ed;
+  --red: #fc8181;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.shell {
+  width: min(980px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.workspace {
+  display: grid;
+  gap: 18px;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 18px;
+}
+
+.topbar p,
+.drop-subtitle,
+.progress-row,
+.result-card p {
+  color: var(--muted);
+}
+
+.status-pill {
+  min-width: 92px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--green);
+  text-align: center;
+  background: var(--panel);
+}
+
+.dropzone {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding: 28px;
+  border: 1px dashed #526371;
+  border-radius: 8px;
+  background: var(--panel);
+  cursor: pointer;
+  text-align: center;
+}
+
+.dropzone.dragover {
+  border-color: var(--green);
+  background: #18251f;
+}
+
+.dropzone input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.drop-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: #26313a;
+  color: var(--orange);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.drop-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.drop-subtitle {
+  display: block;
+  margin-top: 6px;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.controls label {
+  display: grid;
+  gap: 7px;
+}
+
+.controls span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.controls input,
+.controls select {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.progress-card,
+.result-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.progress-row,
+.result-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+progress {
+  width: 100%;
+  height: 14px;
+  margin-top: 10px;
+  accent-color: var(--green);
+}
+
+pre {
+  min-height: 96px;
+  max-height: 260px;
+  margin: 14px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 6px;
+  background: #0b0f12;
+  color: #cbd5df;
+  white-space: pre-wrap;
+}
+
+.download-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: var(--green);
+  color: #08110c;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.error {
+  color: var(--red);
+}
+
+@media (max-width: 720px) {
+  .topbar,
+  .progress-row,
+  .result-card {
+    display: grid;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}

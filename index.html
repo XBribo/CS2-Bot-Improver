@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101418">
+    <title>CS2Rec Converter</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace" aria-label="CS2 demo converter">
+        <header class="topbar">
+          <div>
+            <h1>CS2Rec Converter</h1>
+            <p>Drop a CS2 .dem file and export a ProOpeningReplay .cs2rec v4 bundle.</p>
+          </div>
+          <div class="status-pill" id="runtimeStatus">idle</div>
+        </header>
+
+        <label class="dropzone" id="dropzone">
+          <input id="fileInput" type="file" accept=".dem">
+          <span class="drop-icon" aria-hidden="true">↓</span>
+          <span class="drop-title">Drop demo file here</span>
+          <span class="drop-subtitle">or click to choose a local .dem file</span>
+        </label>
+
+        <section class="controls" aria-label="Conversion options">
+          <label>
+            <span>Tick rate</span>
+            <input id="tickrate" type="number" min="1" step="1" value="64">
+          </label>
+          <label>
+            <span>Origin downsample</span>
+            <select id="downsample">
+              <option value="4" selected>4x</option>
+              <option value="2">2x</option>
+              <option value="1">Off</option>
+            </select>
+          </label>
+          <label>
+            <span>Round cap</span>
+            <input id="maxRoundSeconds" type="number" min="10" step="5" value="160">
+          </label>
+        </section>
+
+        <section class="progress-card" aria-label="Conversion progress">
+          <div class="progress-row">
+            <span id="phase">Waiting for a demo</span>
+            <span id="progressText">0 / 0 ticks</span>
+          </div>
+          <progress id="progress" value="0" max="1"></progress>
+          <pre id="log" aria-live="polite"></pre>
+        </section>
+
+        <section class="result-card" id="resultCard" hidden>
+          <div>
+            <h2>Output ready</h2>
+            <p id="summary"></p>
+          </div>
+          <a class="download-button" id="downloadLink" download>Download zip</a>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="assets/app.js"></script>
+  </body>
+</html>
