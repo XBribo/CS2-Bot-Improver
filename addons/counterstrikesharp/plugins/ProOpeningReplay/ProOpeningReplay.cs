@@ -3151,15 +3151,220 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         var targetItems = BuildReplayLoadoutItems(replayPlayer);
-        GiveMissingTargetItemsDirect(player, targetItems, IsPrimaryWeapon);
-        GiveMissingTargetItemsDirect(player, targetItems, IsSecondaryWeapon);
+        var deferredWeaponSync = false;
+        deferredWeaponSync |= SyncTargetWeaponSlot(player, targetItems, ReplayWeaponSlot.Primary, IsPrimaryWeapon, allowReplacement: !_freezeEnded);
+        deferredWeaponSync |= SyncTargetWeaponSlot(player, targetItems, ReplayWeaponSlot.Secondary, IsSecondaryWeapon, allowReplacement: !_freezeEnded);
         GiveMissingTargetItemsDirect(player, targetItems, itemName => !IsPrimaryWeapon(itemName) && !IsSecondaryWeapon(itemName));
-        SwitchToReplayLoadoutStartWeapon(player, replayPlayer);
+        if (deferredWeaponSync)
+        {
+            Server.NextFrame(() => Server.NextFrame(() => SwitchToReplayLoadoutStartWeapon(player, replayPlayer)));
+        }
+        else
+        {
+            SwitchToReplayLoadoutStartWeapon(player, replayPlayer);
+        }
 
         var loadoutValue = ReplayLoadoutValue(replayPlayer);
         player.InGameMoneyServices.Account = RoundMoneyDown(loadoutBudget - loadoutValue);
         Utilities.SetStateChanged(player, "CCSPlayerController", "m_pInGameMoneyServices");
         return true;
+    }
+
+    private bool SyncTargetWeaponSlot(
+        CCSPlayerController player,
+        Dictionary<string, int> targetItems,
+        ReplayWeaponSlot slot,
+        Func<string, bool> predicate,
+        bool allowReplacement)
+    {
+        var targetItem = BestTargetSlotItem(targetItems, predicate);
+        if (targetItem == null)
+        {
+            return false;
+        }
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null)
+        {
+            TryGiveNamedItem(player, targetItem);
+            return false;
+        }
+
+        if (HasReplayWeapon(pawn, targetItem))
+        {
+            return false;
+        }
+
+        var currentSlotWeapons = GetWeaponsInReplaySlot(pawn, slot).ToList();
+        if (currentSlotWeapons.Count == 0)
+        {
+            TryGiveNamedItem(player, targetItem);
+            return false;
+        }
+
+        if (!allowReplacement)
+        {
+            return false;
+        }
+
+        var fallbackItem = currentSlotWeapons
+            .Select(weapon => NormalizeLoadoutItem(weapon.DesignerName))
+            .FirstOrDefault(itemName => !WeaponClassMatches(itemName, targetItem));
+        var weaponToDrop = currentSlotWeapons
+            .FirstOrDefault(weapon => !WeaponClassMatches(NormalizeLoadoutItem(weapon.DesignerName), targetItem));
+        if (fallbackItem == null || weaponToDrop == null)
+        {
+            return false;
+        }
+
+        if (!TrySelectWeapon(player, pawn, weaponToDrop))
+        {
+            return false;
+        }
+
+        try
+        {
+            player.DropActiveWeapon();
+        }
+        catch
+        {
+            return false;
+        }
+
+        if (player.Slot >= 0)
+        {
+            _lastEnsuredWeaponDef.Remove(player.Slot);
+            _lastReplayWeaponDef.Remove(player.Slot);
+        }
+
+        Server.NextFrame(() => CompleteWeaponSlotReplacement(player, targetItem, fallbackItem, slot));
+        return true;
+    }
+
+    private static string? BestTargetSlotItem(Dictionary<string, int> targetItems, Func<string, bool> predicate)
+        => targetItems.Keys
+            .Where(predicate)
+            .OrderByDescending(ItemPrice)
+            .ThenBy(itemName => itemName, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    private void CompleteWeaponSlotReplacement(
+        CCSPlayerController player,
+        string targetItem,
+        string fallbackItem,
+        ReplayWeaponSlot slot)
+    {
+        if (!player.IsValid)
+        {
+            return;
+        }
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null)
+        {
+            return;
+        }
+
+        if (HasReplayWeapon(pawn, targetItem))
+        {
+            return;
+        }
+
+        if (GetWeaponsInReplaySlot(pawn, slot).Any())
+        {
+            return;
+        }
+
+        TryGiveNamedItem(player, targetItem);
+        Server.NextFrame(() => RestoreFallbackWeaponIfNeeded(player, targetItem, fallbackItem, slot));
+    }
+
+    private static void RestoreFallbackWeaponIfNeeded(
+        CCSPlayerController player,
+        string targetItem,
+        string fallbackItem,
+        ReplayWeaponSlot slot)
+    {
+        if (!player.IsValid)
+        {
+            return;
+        }
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null)
+        {
+            return;
+        }
+
+        if (HasReplayWeapon(pawn, targetItem) || GetWeaponsInReplaySlot(pawn, slot).Any())
+        {
+            return;
+        }
+
+        TryGiveNamedItem(player, fallbackItem);
+    }
+
+    private static bool TryGiveNamedItem(CCSPlayerController player, string itemName)
+    {
+        try
+        {
+            player.GiveNamedItem(itemName);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool TrySelectWeapon(CCSPlayerController player, CCSPlayerPawn pawn, CBasePlayerWeapon weapon)
+    {
+        if (player.Slot >= 0)
+        {
+            var defIndex = WeaponDefIndex(weapon.DesignerName);
+            if (defIndex >= 0)
+            {
+                BotController.SwitchBotWeapon(player.Slot, defIndex);
+            }
+        }
+
+        var weaponServices = pawn.WeaponServices;
+        if (weaponServices == null)
+        {
+            return false;
+        }
+
+        weaponServices.ActiveWeapon.Raw = weapon.EntityHandle.Raw;
+        Utilities.SetStateChanged(pawn, "CBasePlayerPawn", "m_pWeaponServices");
+
+        if (player.UserId != null)
+        {
+            NativeAPI.IssueClientCommand(player.UserId.Value, $"use {weapon.DesignerName}");
+        }
+
+        return true;
+    }
+
+    private static IEnumerable<CBasePlayerWeapon> GetWeaponsInReplaySlot(CCSPlayerPawn pawn, ReplayWeaponSlot slot)
+    {
+        if (pawn.WeaponServices == null)
+        {
+            yield break;
+        }
+
+        foreach (var handle in pawn.WeaponServices.MyWeapons)
+        {
+            var weapon = handle.Value;
+            if (weapon == null || !weapon.IsValid)
+            {
+                continue;
+            }
+
+            if (GetReplayWeaponSlot(NormalizeLoadoutItem(weapon.DesignerName)) == slot)
+            {
+                yield return weapon;
+            }
+        }
     }
 
     private static void GiveMissingTargetItemsDirect(
