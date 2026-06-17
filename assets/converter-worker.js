@@ -230,6 +230,7 @@ function buildDataset(sourceName, mapName, segments, rows, options) {
   let processedRows = 0;
   for (const segment of segments) {
     const roundRows = (rowsBySegment.get(segment.freezeTick) || [])
+      .filter(row => roundNumberMatches(row, segment.roundNumber))
       .filter(isPlayableRow)
       .sort((left, right) => intValue(get(left, "tick"), 0) - intValue(get(right, "tick"), 0));
     if (!roundRows.length) {
@@ -731,8 +732,12 @@ function isPlayableRow(row) {
   const teamNum = intValue(get(row, "team_num"), 0);
   return (teamNum === 2 || teamNum === 3) &&
     validSteamId(steamIdOf(row)) &&
-    get(row, "is_alive") !== false &&
-    get(row, "is_alive") !== 0;
+    (get(row, "is_alive") === undefined || boolValue(get(row, "is_alive")));
+}
+
+function roundNumberMatches(row, roundNumber) {
+  const value = get(row, "total_rounds_played");
+  return value === undefined || intValue(value, roundNumber) === roundNumber;
 }
 
 function steamIdOf(row) {

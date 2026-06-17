@@ -217,7 +217,7 @@
       z: roundFloat(frame.z),
       pitch: roundFloat(frame.pitch),
       yaw: roundFloat(frame.yaw),
-      buttons: Number(toU64(frame.buttons) & BigInt(0xffffffff)),
+      buttons: Number(toU64(frame.buttons)),
       activeWeapon: frame.activeWeapon || ""
     };
     const def = weaponDefFromFrame(frame);
