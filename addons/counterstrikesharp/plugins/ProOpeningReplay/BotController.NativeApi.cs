@@ -109,6 +109,7 @@ public static class BotController
     private static GetReplayTotalDelegate? _getReplayTotal;
     private static GetReplayTickDelegate? _getReplayTick;
     private static SwitchBotWeaponDelegate? _switchBotWeapon;
+    private static GetBotActiveWeaponDefDelegate? _getBotActiveWeaponDef;
     private static GetHookCallCountDelegate? _getHookCallCount;
     private static GetLastIntDelegate? _getLastResolvedSlot;
     private static GetHookCallCountDelegate? _getFinishMoveCallCount;
@@ -321,6 +322,9 @@ public static class BotController
     public static bool SwitchBotWeapon(int slot, int defIndex)
         => defIndex >= 0 && Invoke(() => _switchBotWeapon!(slot, defIndex) == 0);
 
+    public static int GetBotActiveWeaponDef(int slot)
+        => _getBotActiveWeaponDef == null ? -1 : Invoke(() => _getBotActiveWeaponDef!(slot), -1);
+
     public static ulong GetHookCallCount()
         => _getHookCallCount == null ? 0UL : Invoke(() => _getHookCallCount!(), 0UL);
 
@@ -421,6 +425,7 @@ public static class BotController
                 _getReplayTotal = LoadExport<GetReplayTotalDelegate>("BotController_GetReplayTotal");
                 _getReplayTick = LoadExport<GetReplayTickDelegate>("BotController_GetReplayTick");
                 _switchBotWeapon = LoadExport<SwitchBotWeaponDelegate>("BotController_SwitchBotWeapon");
+                _getBotActiveWeaponDef = TryLoadExport<GetBotActiveWeaponDefDelegate>("BotController_GetBotActiveWeaponDef");
                 _getHookCallCount = TryLoadExport<GetHookCallCountDelegate>("BotController_GetHookCallCount");
                 _getLastResolvedSlot = TryLoadExport<GetLastIntDelegate>("BotController_GetLastResolvedSlot");
                 _getFinishMoveCallCount = TryLoadExport<GetHookCallCountDelegate>("BotController_GetFinishMoveCallCount");
@@ -482,6 +487,7 @@ public static class BotController
         _getReplayTotal = null;
         _getReplayTick = null;
         _switchBotWeapon = null;
+        _getBotActiveWeaponDef = null;
         _getHookCallCount = null;
         _getLastResolvedSlot = null;
         _getFinishMoveCallCount = null;
@@ -1258,6 +1264,9 @@ public static class BotController
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int SwitchBotWeaponDelegate(int slot, int defIndex);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int GetBotActiveWeaponDefDelegate(int slot);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate ulong GetHookCallCountDelegate();

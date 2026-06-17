@@ -45,6 +45,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private readonly Dictionary<int, int> _lastReplayWeaponDef = [];
     private readonly Dictionary<int, LockTarget> _lastLockedWeaponTarget = [];
     private readonly HashSet<(int Slot, int DefIndex)> _preloadedReplayWeapons = [];
+    private readonly Dictionary<uint, float> _manifestReplayProjectiles = [];
     // Bots that recently exited replay — suppress IsStuck for a grace period to prevent BotState's
     // unstuck logic from making them jump/spin while the pathfinder recalculates a valid route.
     private readonly Dictionary<CCSPlayerController, float> _handoffGraceExpiry = [];
@@ -53,6 +54,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private readonly Dictionary<int, string> _nativeReplayPreloadKeys = [];
     private readonly HashSet<int> _loadoutAppliedKeys = [];
     private readonly Dictionary<int, int> _roundLoadoutBudgets = [];
+    private readonly Dictionary<int, EnemyWatchState> _enemyWatchStates = [];
     private readonly Dictionary<CsTeam, RoundEconomyIndex> _roundIndexes = [];
     private readonly Dictionary<CsTeam, SpawnReplayIndex> _spawnIndexes = [];
     private readonly Dictionary<int, float> _lastHurtTime = [];
@@ -86,6 +88,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private const float BombSiteRadius = 150f;
     // Bomb timer in seconds; competitive default is 40. Updated from the planted_c4 entity if available.
     private const float DefaultBombTimerSeconds = 40f;
+    private const float ManifestProjectileProtectSeconds = 30f;
     private static readonly HashSet<string> PrimaryWeapons = new(StringComparer.OrdinalIgnoreCase)
     {
         "weapon_ak47", "weapon_aug", "weapon_awp", "weapon_famas", "weapon_g3sg1", "weapon_galilar",
@@ -109,6 +112,16 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     {
         "weapon_flashbang", "weapon_hegrenade", "weapon_smokegrenade", "weapon_molotov", "weapon_incgrenade", "weapon_decoy"
     };
+
+    private static readonly string[] ReplayProjectileDesignerNames =
+    [
+        "flashbang_projectile",
+        "hegrenade_projectile",
+        "smokegrenade_projectile",
+        "molotov_projectile",
+        "incendiarygrenade_projectile",
+        "decoy_projectile"
+    ];
 
     private static readonly HashSet<string> SecondaryWeapons = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -272,6 +285,39 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         ["weapon_revolver"] = 64,
     };
 
+    private static readonly MemoryFunctionWithReturn<
+        IntPtr, IntPtr, IntPtr, IntPtr, IntPtr, int, int, CSmokeGrenadeProjectile>
+        SmokeProjectileCreate = new(
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? @"55 4C 89 C1 48 89 E5 41 57 45 89 CF 41 56 49 89 FE"
+                : @"48 8B C4 48 89 58 ? 48 89 68 ? 48 89 70 ? 57 41 56 41 57 48 81 EC ? ? ? ? 48 8B B4 24 ? ? ? ? 4D 8B F8");
+
+    private static readonly MemoryFunctionWithReturn<
+        IntPtr, IntPtr, IntPtr, IntPtr, IntPtr, int, CHEGrenadeProjectile>
+        HeProjectileCreate = new(
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? "55 4C 89 C1 48 89 E5 41 57 49 89 D7"
+                : "48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 57 48 83 EC 50 48 8B AC 24 80 00 00 00 49 8B F8");
+
+    private static readonly MemoryFunctionWithReturn<
+        IntPtr, IntPtr, IntPtr, IntPtr, IntPtr, int, CMolotovProjectile>
+        MolotovProjectileCreate = new(
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                ? "55 48 8D 05 ? ? ? ? 48 89 E5 41 57 41 56 41 55 41 54 49 89 FC 53 48 81 EC ? ? ? ? 4C 8D 35"
+                : "48 8B C4 48 89 58 10 4C 89 40 18 48 89 48 08");
+
+    private readonly record struct BotEnemyMemoryOffsets(int TargetSpot, int Enemy, int IsVisible);
+
+    private static readonly BotEnemyMemoryOffsets LinuxBotEnemyMemoryOffsets = new(
+        TargetSpot: 0x597C,
+        Enemy: 0x59E8,
+        IsVisible: 0x59EC);
+
+    private static readonly BotEnemyMemoryOffsets WindowsBotEnemyMemoryOffsets = new(
+        TargetSpot: 0x59A4,
+        Enemy: 0x5A10,
+        IsVisible: 0x5A14);
+
     private static readonly HashSet<int> PrimaryWeaponDefIndexes = new(
         PrimaryWeapons
             .Select(itemName => WeaponDefIndexes.GetValueOrDefault(itemName, -1))
@@ -318,6 +364,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         _loadoutAppliedKeys.Clear();
         _roundLoadoutBudgets.Clear();
         _lastHurtTime.Clear();
+        _manifestReplayProjectiles.Clear();
+        _enemyWatchStates.Clear();
         ClearNativeWeaponState();
         _roundPrepared = false;
     }
@@ -353,6 +401,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         _roundLoadoutBudgets.Clear();
         _lastHurtTime.Clear();
         _handoffGraceExpiry.Clear();
+        _manifestReplayProjectiles.Clear();
+        _enemyWatchStates.Clear();
         ClearNativeWeaponState();
         _roundPrepared = false;
         _freezeEnded = false;
@@ -410,6 +460,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         _loadoutAppliedKeys.Clear();
         _roundLoadoutBudgets.Clear();
         _lastHurtTime.Clear();
+        _manifestReplayProjectiles.Clear();
+        _enemyWatchStates.Clear();
         ClearNativeWeaponState();
         _roundPrepared = false;
         _freezeEnded = false;
@@ -544,7 +596,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             if (elapsed < 20f) continue;
 
             // Must be enemy of the replaying bot
-            if (session.Player.Team == soundSource.Team) continue;
+            if (!IsLiveEnemy(session.Player, soundSource)) continue;
 
             var botPawn = session.Player.PlayerPawn.Value;
             if (botPawn?.AbsOrigin == null) continue;
@@ -554,6 +606,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             var dz = botPawn.AbsOrigin.Z - sourcePawn.AbsOrigin.Z;
             if (dx * dx + dy * dy + dz * dz <= rangeSq)
             {
+                PrimeBotForKnownEnemy(session.Player, soundSource, markVisible: false);
                 EndSession(i, "heard_enemy");
             }
         }
@@ -1293,6 +1346,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         var allPlayersThisTick = Utilities.GetPlayers();
 
         ProcessRetakeMoveTos(allPlayersThisTick);
+        KillNativeReplayGrenadeProjectiles();
 
         for (var sessionIndex = _sessions.Count - 1; sessionIndex >= 0; sessionIndex--)
         {
@@ -1316,6 +1370,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             if (ShouldHandOff(session.Player, allPlayersThisTick))
             {
                 EndSession(sessionIndex, "contact");
+                continue;
+            }
+
+            if (TryGetEnemyWatchingOpeningReplay(session, allPlayersThisTick, out var watcher)
+                && TrackEnemyWatchingReplayBot(session, watcher))
+            {
+                PrimeBotForKnownEnemy(session.Player, watcher, markVisible: true);
+                EndSession(sessionIndex, "seen_by_enemy");
                 continue;
             }
 
@@ -1375,8 +1437,268 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             }
             TrackNativeReplayProgress(session, nativeCursor);
 
+            ProcessReplayGrenades(session, elapsed);
             ApplyReplaySideEffects(session);
         }
+    }
+
+    private void ProcessReplayGrenades(ReplaySession session, float elapsed)
+    {
+        if (!_config.ThrowGrenades || session.Grenades.Count == 0)
+        {
+            return;
+        }
+
+        while (session.NextGrenadeIndex < session.Grenades.Count)
+        {
+            var grenade = session.Grenades[session.NextGrenadeIndex];
+            if (grenade.Time > elapsed + 0.015f)
+            {
+                break;
+            }
+
+            session.NextGrenadeIndex++;
+            SpawnReplayGrenadeProjectile(session.Player, grenade);
+        }
+    }
+
+    private void KillNativeReplayGrenadeProjectiles()
+    {
+        if (!_config.ThrowGrenades || !_config.KillNativeReplayGrenadeProjectiles || _sessions.Count == 0)
+        {
+            return;
+        }
+
+        PruneManifestReplayProjectileProtection();
+
+        HashSet<uint>? replayPawnHandles = null;
+        foreach (var session in _sessions)
+        {
+            if (!session.NativeReplayActive || !session.Player.IsValid || !session.Player.PawnIsAlive)
+            {
+                continue;
+            }
+
+            var pawn = session.Player.PlayerPawn.Value;
+            if (pawn == null || !pawn.IsValid)
+            {
+                continue;
+            }
+
+            replayPawnHandles ??= [];
+            replayPawnHandles.Add(pawn.EntityHandle.Raw);
+        }
+
+        if (replayPawnHandles == null || replayPawnHandles.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var designerName in ReplayProjectileDesignerNames)
+        {
+            foreach (var projectile in Utilities.FindAllEntitiesByDesignerName<CBaseCSGrenadeProjectile>(designerName))
+            {
+                if (projectile == null || !projectile.IsValid)
+                {
+                    continue;
+                }
+
+                var raw = projectile.EntityHandle.Raw;
+                if (_manifestReplayProjectiles.ContainsKey(raw))
+                {
+                    continue;
+                }
+
+                if (replayPawnHandles.Contains(projectile.Thrower.Raw)
+                    || replayPawnHandles.Contains(projectile.OriginalThrower.Raw)
+                    || replayPawnHandles.Contains(projectile.OwnerEntity.Raw))
+                {
+                    projectile.AcceptInput("Kill");
+                }
+            }
+        }
+    }
+
+    private void PruneManifestReplayProjectileProtection()
+    {
+        if (_manifestReplayProjectiles.Count == 0)
+        {
+            return;
+        }
+
+        var now = Server.CurrentTime;
+        foreach (var (raw, expiresAt) in _manifestReplayProjectiles.ToArray())
+        {
+            if (now >= expiresAt)
+            {
+                _manifestReplayProjectiles.Remove(raw);
+            }
+        }
+    }
+
+    private void ProtectManifestReplayProjectile(CBaseCSGrenadeProjectile projectile)
+    {
+        if (projectile.IsValid)
+        {
+            _manifestReplayProjectiles[projectile.EntityHandle.Raw] = Server.CurrentTime + ManifestProjectileProtectSeconds;
+        }
+    }
+
+    private bool SpawnReplayGrenadeProjectile(CCSPlayerController player, ReplayGrenade grenade)
+    {
+        if (!player.IsValid || !player.PawnIsAlive)
+        {
+            return false;
+        }
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid)
+        {
+            return false;
+        }
+
+        var normalized = NormalizeGrenadeType(grenade.Type);
+        var origin = new Vector(grenade.X, grenade.Y, grenade.Z);
+        var velocity = new Vector(grenade.VelocityX, grenade.VelocityY, grenade.VelocityZ);
+        var angles = ReplayGrenadeAngles(grenade, velocity);
+        var teamNum = player.TeamNum;
+
+        try
+        {
+            CBaseCSGrenadeProjectile? projectile = normalized switch
+            {
+                "weapon_flashbang" => SpawnReplayFlashProjectile(pawn, teamNum, origin, angles, velocity),
+                "weapon_decoy" => SpawnReplayDecoyProjectile(pawn, teamNum, origin, angles, velocity),
+                "weapon_smokegrenade" => SmokeProjectileCreate.Invoke(
+                    origin.Handle,
+                    origin.Handle,
+                    velocity.Handle,
+                    velocity.Handle,
+                    pawn.Handle,
+                    45,
+                    teamNum),
+                "weapon_hegrenade" => HeProjectileCreate.Invoke(
+                    origin.Handle,
+                    origin.Handle,
+                    velocity.Handle,
+                    velocity.Handle,
+                    pawn.Handle,
+                    44),
+                "weapon_molotov" => MolotovProjectileCreate.Invoke(
+                    origin.Handle,
+                    origin.Handle,
+                    velocity.Handle,
+                    velocity.Handle,
+                    pawn.Handle,
+                    46),
+                "weapon_incgrenade" => MolotovProjectileCreate.Invoke(
+                    origin.Handle,
+                    origin.Handle,
+                    velocity.Handle,
+                    velocity.Handle,
+                    pawn.Handle,
+                    48),
+                _ => null
+            };
+
+            if (projectile == null || !projectile.IsValid)
+            {
+                return false;
+            }
+
+            AssignReplayProjectileOwner(projectile, pawn, teamNum);
+            ProtectManifestReplayProjectile(projectile);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"[ProReplay] replay grenade spawn failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    private static QAngle ReplayGrenadeAngles(ReplayGrenade grenade, Vector velocity)
+    {
+        if (float.IsFinite(grenade.Pitch) || float.IsFinite(grenade.Yaw))
+        {
+            return new QAngle(
+                float.IsFinite(grenade.Pitch) ? grenade.Pitch : 0f,
+                float.IsFinite(grenade.Yaw) ? grenade.Yaw : 0f,
+                0f);
+        }
+
+        var yaw = MathF.Atan2(velocity.Y, velocity.X) * (180f / MathF.PI);
+        var horizontal = MathF.Sqrt(velocity.X * velocity.X + velocity.Y * velocity.Y);
+        var pitch = -MathF.Atan2(velocity.Z, horizontal) * (180f / MathF.PI);
+        return new QAngle(pitch, yaw, 0f);
+    }
+
+    private static CFlashbangProjectile? SpawnReplayFlashProjectile(
+        CCSPlayerPawn pawn,
+        int teamNum,
+        Vector origin,
+        QAngle angles,
+        Vector velocity)
+    {
+        var flash = Utilities.CreateEntityByName<CFlashbangProjectile>("flashbang_projectile");
+        if (flash == null)
+        {
+            return null;
+        }
+
+        AssignReplayProjectileOwner(flash, pawn, teamNum);
+        SetReplayProjectileInitialKinematics(flash, origin, velocity);
+        flash.Elasticity = 0.33f;
+        flash.Teleport(origin, angles, velocity);
+        flash.DispatchSpawn();
+        flash.Teleport(origin, angles, velocity);
+        return flash;
+    }
+
+    private static CDecoyProjectile? SpawnReplayDecoyProjectile(
+        CCSPlayerPawn pawn,
+        int teamNum,
+        Vector origin,
+        QAngle angles,
+        Vector velocity)
+    {
+        var decoy = Utilities.CreateEntityByName<CDecoyProjectile>("decoy_projectile");
+        if (decoy == null)
+        {
+            return null;
+        }
+
+        AssignReplayProjectileOwner(decoy, pawn, teamNum);
+        SetReplayProjectileInitialKinematics(decoy, origin, velocity);
+        decoy.Elasticity = 0.33f;
+        decoy.Teleport(origin, angles, velocity);
+        decoy.DispatchSpawn();
+        decoy.Teleport(origin, angles, velocity);
+        return decoy;
+    }
+
+    private static void AssignReplayProjectileOwner(
+        CBaseCSGrenadeProjectile projectile,
+        CCSPlayerPawn pawn,
+        int teamNum)
+    {
+        projectile.TeamNum = (byte)teamNum;
+        projectile.Thrower.Raw = pawn.EntityHandle.Raw;
+        projectile.OriginalThrower.Raw = pawn.EntityHandle.Raw;
+        projectile.OwnerEntity.Raw = pawn.EntityHandle.Raw;
+    }
+
+    private static void SetReplayProjectileInitialKinematics(
+        CBaseCSGrenadeProjectile projectile,
+        Vector origin,
+        Vector velocity)
+    {
+        projectile.InitialPosition.X = origin.X;
+        projectile.InitialPosition.Y = origin.Y;
+        projectile.InitialPosition.Z = origin.Z;
+        projectile.InitialVelocity.X = velocity.X;
+        projectile.InitialVelocity.Y = velocity.Y;
+        projectile.InitialVelocity.Z = velocity.Z;
     }
 
     private void ProcessRetakeMoveTos(List<CCSPlayerController> allPlayersThisTick)
@@ -1588,6 +1910,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     {
         var session = _sessions[sessionIndex];
         _sessions.RemoveAt(sessionIndex);
+        _enemyWatchStates.Remove(PlayerKey(session.Player));
         StopNativeReplay(session);
         ReleaseBotToNativeAi(session.Player);
     }
@@ -1715,7 +2038,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 continue;
             }
 
-            PrimeBotForHeardEnemy(listener, sourceOrigin);
+            PrimeBotForKnownEnemy(listener, source, markVisible: false);
             EndSession(sessionIndex, reason);
         }
     }
@@ -1782,7 +2105,25 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return siteIndex == bestIdx;
     }
 
-    private static void PrimeBotForHeardEnemy(CCSPlayerController listener, Vector sourceOrigin)
+    private static void PrimeBotForKnownEnemy(CCSPlayerController listener, CCSPlayerController enemy, bool markVisible)
+    {
+        var enemyPawn = enemy.PlayerPawn.Value;
+        var enemyOrigin = enemyPawn?.AbsOrigin;
+        if (enemyPawn == null || !enemyPawn.IsValid || enemyOrigin == null)
+        {
+            return;
+        }
+
+        var viewZ = enemyPawn.ViewOffset?.Z ?? 64f;
+        var target = new Vector(enemyOrigin.X, enemyOrigin.Y, enemyOrigin.Z + (viewZ * 0.72f));
+        PrimeBotForKnownEnemy(listener, enemyPawn, target, markVisible);
+    }
+
+    private static void PrimeBotForKnownEnemy(
+        CCSPlayerController listener,
+        CCSPlayerPawn enemyPawn,
+        Vector enemyPosition,
+        bool markVisible)
     {
         var pawn = listener.PlayerPawn.Value;
         if (pawn == null || !pawn.IsValid)
@@ -1790,7 +2131,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return;
         }
 
-        AimPawnAtPosition(pawn, sourceOrigin);
+        AimPawnAtPosition(pawn, enemyPosition);
 
         var bot = pawn.Bot;
         if (bot == null)
@@ -1798,10 +2139,48 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return;
         }
 
+        WriteBotKnownEnemy(bot.Handle, enemyPawn, enemyPosition, markVisible);
+
         bot.IsSleeping = false;
         bot.AllowActive = true;
         bot.EyeAnglesUnderPathFinderControl = false;
         bot.InhibitLookAroundTimestamp = Server.CurrentTime + 0.5f;
+
+        CountdownTimer ignoreEnemiesTimer = bot.IgnoreEnemiesTimer;
+        ref float ignoreDuration = ref ignoreEnemiesTimer.Duration;
+        ignoreDuration = 0f;
+        ref float ignoreTimestamp = ref ignoreEnemiesTimer.Timestamp;
+        ignoreTimestamp = 0f;
+    }
+
+    private static void WriteBotKnownEnemy(nint botHandle, CCSPlayerPawn enemyPawn, Vector enemyPosition, bool markVisible)
+    {
+        if (botHandle == nint.Zero)
+        {
+            return;
+        }
+
+        var offsets = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+            ? LinuxBotEnemyMemoryOffsets
+            : WindowsBotEnemyMemoryOffsets;
+
+        try
+        {
+            Marshal.WriteInt32(botHandle + offsets.Enemy, unchecked((int)enemyPawn.EntityHandle.Raw));
+            WriteFloat(botHandle + offsets.TargetSpot, enemyPosition.X);
+            WriteFloat(botHandle + offsets.TargetSpot + sizeof(float), enemyPosition.Y);
+            WriteFloat(botHandle + offsets.TargetSpot + (sizeof(float) * 2), enemyPosition.Z);
+            Marshal.WriteByte(botHandle + offsets.IsVisible, markVisible ? (byte)1 : (byte)0);
+        }
+        catch
+        {
+            // CCSBot memory layout is version-sensitive. If writing fails, keep the safer eye-angle/AI wakeup path.
+        }
+    }
+
+    private static void WriteFloat(nint address, float value)
+    {
+        Marshal.WriteInt32(address, BitConverter.SingleToInt32Bits(value));
     }
 
     private static void AimPawnAtPosition(CCSPlayerPawn pawn, Vector target)
@@ -2164,7 +2543,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (!force
             && _lastReplayWeaponDef.TryGetValue(slot, out var lastDef)
-            && lastDef == normalized)
+            && lastDef == normalized
+            && IsReplayWeaponActive(session.Player, normalized))
         {
             return true;
         }
@@ -2192,8 +2572,33 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         var switched = BotController.SwitchBotWeapon(slot, normalized);
-        _lastReplayWeaponDef[slot] = normalized;
-        return switched;
+        if (switched || IsReplayWeaponActive(session.Player, normalized))
+        {
+            _lastReplayWeaponDef[slot] = normalized;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsReplayWeaponActive(CCSPlayerController player, int weaponDefIndex)
+    {
+        var normalized = NormalizeWeaponDefIndex(weaponDefIndex);
+        if (!IsKnownWeaponDefIndex(normalized))
+        {
+            return false;
+        }
+
+        var nativeDef = player.Slot >= 0 ? BotController.GetBotActiveWeaponDef(player.Slot) : -1;
+        if (nativeDef >= 0)
+        {
+            return NormalizeWeaponDefIndex(nativeDef) == normalized;
+        }
+
+        var active = player.PlayerPawn.Value?.WeaponServices?.ActiveWeapon.Value;
+        return active != null
+            && active.IsValid
+            && NormalizeWeaponDefIndex(WeaponDefIndex(active.DesignerName)) == normalized;
     }
 
     private void EnsureReplayWeaponForSlot(
@@ -2587,8 +2992,15 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         var allowReplayAttack = false;
         if (session.NativeReplayActive && BotController.TryGetReplayTick(session.NativeReplaySlot, out var tick))
         {
-            allowReplayAttack = BotController.IsThrowableUtilityWeaponDef(tick.WeaponDefIndex);
-            ApplyReplayWeaponPreset(session, tick.WeaponDefIndex, allowSlotReplacement: true, force: false);
+            var weaponDefIndex = NormalizeWeaponDefIndex(tick.WeaponDefIndex);
+            var isThrowableUtility = BotController.IsThrowableUtilityWeaponDef(weaponDefIndex);
+            ApplyReplayWeaponPreset(session, weaponDefIndex, allowSlotReplacement: true, force: false);
+            if (isThrowableUtility && !IsReplayWeaponActive(session.Player, weaponDefIndex))
+            {
+                ApplyReplayWeaponPreset(session, weaponDefIndex, allowSlotReplacement: true, force: true);
+            }
+
+            allowReplayAttack = isThrowableUtility && IsReplayWeaponActive(session.Player, weaponDefIndex);
         }
 
         ApplyReplayControlSideEffects(session.Player, session.StartTime, allowReplayAttack);
@@ -3177,6 +3589,116 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         return false;
+    }
+
+    private bool TryGetEnemyWatchingOpeningReplay(
+        ReplaySession session,
+        IReadOnlyList<CCSPlayerController> allPlayers,
+        out CCSPlayerController watcher)
+    {
+        watcher = null!;
+        if (!_config.StopOpeningReplayWhenSeenByEnemy || session.Kind != ReplaySessionKind.Opening)
+        {
+            return false;
+        }
+
+        var targetPawn = session.Player.PlayerPawn.Value;
+        if (targetPawn == null || !targetPawn.IsValid || targetPawn.AbsOrigin == null)
+        {
+            return false;
+        }
+
+        var rayTrace = TryGetRayTrace();
+        if (rayTrace == null)
+        {
+            return false;
+        }
+
+        var playerKey = PlayerKey(session.Player);
+        if (_enemyWatchStates.TryGetValue(playerKey, out var current))
+        {
+            foreach (var candidate in allPlayers)
+            {
+                if (!IsLiveEnemy(session.Player, candidate)
+                    || PlayerKey(candidate) != current.EnemyKey
+                    || !IsEnemyWatchingReplayBot(rayTrace, session.Player, targetPawn, candidate))
+                {
+                    continue;
+                }
+
+                watcher = candidate;
+                return true;
+            }
+        }
+
+        var bestDistance = float.MaxValue;
+        CCSPlayerController? best = null;
+        foreach (var enemy in allPlayers)
+        {
+            if (!IsEnemyWatchingReplayBot(rayTrace, session.Player, targetPawn, enemy))
+            {
+                continue;
+            }
+
+            var enemyOrigin = enemy.PlayerPawn.Value?.AbsOrigin;
+            if (enemyOrigin == null)
+            {
+                continue;
+            }
+
+            var distance = DistanceSquared(enemyOrigin, targetPawn.AbsOrigin);
+            if (distance >= bestDistance)
+            {
+                continue;
+            }
+
+            bestDistance = distance;
+            best = enemy;
+        }
+
+        if (best == null)
+        {
+            return false;
+        }
+
+        watcher = best;
+        return true;
+    }
+
+    private bool IsEnemyWatchingReplayBot(
+        CRayTraceInterface rayTrace,
+        CCSPlayerController replayBot,
+        CCSPlayerPawn replayPawn,
+        CCSPlayerController enemy)
+    {
+        if (!IsLiveEnemy(replayBot, enemy))
+        {
+            return false;
+        }
+
+        var enemyPawn = enemy.PlayerPawn.Value;
+        return enemyPawn != null
+            && enemyPawn.IsValid
+            && TryGetEyePosition(enemyPawn, out var enemyEye)
+            && RayTraceSeesEnemy(rayTrace, enemyPawn, enemyEye, replayPawn);
+    }
+
+    private bool TrackEnemyWatchingReplayBot(ReplaySession session, CCSPlayerController watcher)
+    {
+        var playerKey = PlayerKey(session.Player);
+        var watcherKey = PlayerKey(watcher);
+        var now = Server.CurrentTime;
+
+        if (!_enemyWatchStates.TryGetValue(playerKey, out var state)
+            || state.EnemyKey != watcherKey
+            || now - state.LastSeenTime > 0.15f)
+        {
+            state = new EnemyWatchState(watcherKey, now);
+            _enemyWatchStates[playerKey] = state;
+        }
+
+        state.LastSeenTime = now;
+        return now - state.VisibleSince >= Math.Max(0.05f, _config.EnemySeenHandoffSeconds);
     }
 
     private bool RayTraceSeesAnyEnemy(
@@ -4244,11 +4766,14 @@ public sealed class ReplayConfig
     public bool PreserveUsefulEquipment { get; set; } = true;
     public bool TransferSavedUtility { get; set; } = true;
     /// <summary>
-    /// Legacy option kept for existing configs. Grenades are now thrown by native replay input;
-    /// manifest grenade entries are used for matching and validation, not projectile spawning.
+    /// Spawn recorded manifest grenade projectiles at their extracted release time/position/velocity.
+    /// Native replay still drives the bot's throw animation and inventory consumption.
     /// </summary>
     public bool ThrowGrenades { get; set; } = true;
+    public bool KillNativeReplayGrenadeProjectiles { get; set; } = true;
     public bool StopOnEnemyContact { get; set; } = true;
+    public bool StopOpeningReplayWhenSeenByEnemy { get; set; } = true;
+    public float EnemySeenHandoffSeconds { get; set; } = 1.0f;
     /// <summary>
     /// Hand off to the bot AI when the bot is flashed. Off by default: pros routinely run through their own pop
     /// flashes, and ending the replay on flash truncated openings noticeably early.
@@ -4969,6 +5494,13 @@ public enum ReplayWeaponSlot
 }
 
 public enum ReplaySessionKind { Opening, Retake }
+
+public sealed class EnemyWatchState(int enemyKey, float visibleSince)
+{
+    public int EnemyKey { get; } = enemyKey;
+    public float VisibleSince { get; } = visibleSince;
+    public float LastSeenTime { get; set; } = visibleSince;
+}
 
 public enum BotMoveRouteType
 {
