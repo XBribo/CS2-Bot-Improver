@@ -77,7 +77,7 @@ public struct SubtickMove
 
 public static class BotController
 {
-    private const int ExpectedAbiVersion = 10;
+    private const int ExpectedAbiVersion = 11;
     public const uint RecFormatVersionV4 = 4;
     public const int MovementSnapshotByteSize = 92;
     public const int ReplayTickByteSize = 192;
@@ -110,6 +110,11 @@ public static class BotController
     private static GetReplayTickDelegate? _getReplayTick;
     private static SwitchBotWeaponDelegate? _switchBotWeapon;
     private static GetBotActiveWeaponDefDelegate? _getBotActiveWeaponDef;
+    private static SetBuyPlanDelegate? _setBuyPlan;
+    private static SetBuySkipDelegate? _setBuySkip;
+    private static ClearBuyPlanDelegate? _clearBuyPlan;
+    private static ClearAllBuyPlansDelegate? _clearAllBuyPlans;
+    private static GetBuyPlanItemCountDelegate? _getBuyPlanItemCount;
     private static GetHookCallCountDelegate? _getHookCallCount;
     private static GetLastIntDelegate? _getLastResolvedSlot;
     private static GetHookCallCountDelegate? _getFinishMoveCallCount;
@@ -325,6 +330,21 @@ public static class BotController
     public static int GetBotActiveWeaponDef(int slot)
         => _getBotActiveWeaponDef == null ? -1 : Invoke(() => _getBotActiveWeaponDef!(slot), -1);
 
+    public static bool SetBuyPlan(int slot, string aliases)
+        => Invoke(() => _setBuyPlan!(slot, aliases ?? string.Empty) == 0);
+
+    public static bool SetBuySkip(int slot)
+        => Invoke(() => _setBuySkip!(slot) == 0);
+
+    public static bool ClearBuyPlan(int slot)
+        => Invoke(() => _clearBuyPlan!(slot) == 0);
+
+    public static bool ClearAllBuyPlans()
+        => Invoke(() => _clearAllBuyPlans!() == 0);
+
+    public static int BuyPlanItemCount(int slot)
+        => Invoke(() => _getBuyPlanItemCount!(slot), -1);
+
     public static ulong GetHookCallCount()
         => _getHookCallCount == null ? 0UL : Invoke(() => _getHookCallCount!(), 0UL);
 
@@ -426,6 +446,11 @@ public static class BotController
                 _getReplayTick = LoadExport<GetReplayTickDelegate>("BotController_GetReplayTick");
                 _switchBotWeapon = LoadExport<SwitchBotWeaponDelegate>("BotController_SwitchBotWeapon");
                 _getBotActiveWeaponDef = TryLoadExport<GetBotActiveWeaponDefDelegate>("BotController_GetBotActiveWeaponDef");
+                _setBuyPlan = LoadExport<SetBuyPlanDelegate>("BotController_SetBuyPlan");
+                _setBuySkip = LoadExport<SetBuySkipDelegate>("BotController_SetBuySkip");
+                _clearBuyPlan = LoadExport<ClearBuyPlanDelegate>("BotController_ClearBuyPlan");
+                _clearAllBuyPlans = LoadExport<ClearAllBuyPlansDelegate>("BotController_ClearAllBuyPlans");
+                _getBuyPlanItemCount = LoadExport<GetBuyPlanItemCountDelegate>("BotController_GetBuyPlanItemCount");
                 _getHookCallCount = TryLoadExport<GetHookCallCountDelegate>("BotController_GetHookCallCount");
                 _getLastResolvedSlot = TryLoadExport<GetLastIntDelegate>("BotController_GetLastResolvedSlot");
                 _getFinishMoveCallCount = TryLoadExport<GetHookCallCountDelegate>("BotController_GetFinishMoveCallCount");
@@ -488,6 +513,11 @@ public static class BotController
         _getReplayTick = null;
         _switchBotWeapon = null;
         _getBotActiveWeaponDef = null;
+        _setBuyPlan = null;
+        _setBuySkip = null;
+        _clearBuyPlan = null;
+        _clearAllBuyPlans = null;
+        _getBuyPlanItemCount = null;
         _getHookCallCount = null;
         _getLastResolvedSlot = null;
         _getFinishMoveCallCount = null;
@@ -673,7 +703,7 @@ public static class BotController
             throw new InvalidDataException($"snapshot count {snapshotCount} != tick count + 1 ({tickCount + 1}) in {recKey}");
         }
 
-        _ = CheckedCount(ReadVarUInt32(reader), "transform_downsample");
+        var transformDownsample = CheckedCount(ReadVarUInt32(reader), "transform_downsample");
         var transformSampleCount = CheckedCount(ReadVarUInt32(reader), "transform_sample_count");
         _ = ReadRecString(reader);
         _ = ReadRecString(reader);
@@ -689,7 +719,6 @@ public static class BotController
         }
 
         var snapshots = new MovementSnapshot[snapshotCount];
-        ApplyOriginSamples(snapshots, samples);
         for (var i = 0; i < snapshotCount; i++)
         {
             snapshots[i].Pitch = reader.ReadSingle();
@@ -702,6 +731,11 @@ public static class BotController
             snapshots[i].VelX = reader.ReadSingle();
             snapshots[i].VelY = reader.ReadSingle();
             snapshots[i].VelZ = reader.ReadSingle();
+        }
+        ApplyOriginSamples(snapshots, samples, tickRate);
+        if (transformDownsample > 1)
+        {
+            RebuildVelocitiesFromOrigins(snapshots, tickRate);
         }
 
         var entityFlags = ReadUIntRle(reader, snapshotCount);
@@ -968,7 +1002,7 @@ public static class BotController
         return values;
     }
 
-    private static void ApplyOriginSamples(MovementSnapshot[] snapshots, OriginSample[] samples)
+    private static void ApplyOriginSamples(MovementSnapshot[] snapshots, OriginSample[] samples, float tickRate)
     {
         if (snapshots.Length == 0)
         {
@@ -981,28 +1015,158 @@ public static class BotController
         }
 
         Array.Sort(samples, static (left, right) => left.Index.CompareTo(right.Index));
-        var sampleCursor = 0;
-        for (var i = 0; i < snapshots.Length; i++)
+        for (var i = 0; i < samples.Length - 1; i++)
         {
-            while (sampleCursor + 1 < samples.Length && samples[sampleCursor + 1].Index <= i)
+            FillOriginSegment(snapshots, samples[i], samples[i + 1], tickRate);
+        }
+
+        var first = samples[0];
+        for (var i = 0; i < Math.Clamp(first.Index, 0, snapshots.Length); i++)
+        {
+            SetOrigin(ref snapshots[i], first.X, first.Y, first.Z);
+        }
+
+        var last = samples[^1];
+        for (var i = Math.Clamp(last.Index, 0, snapshots.Length - 1); i < snapshots.Length; i++)
+        {
+            SetOrigin(ref snapshots[i], last.X, last.Y, last.Z);
+        }
+    }
+
+    private static void FillOriginSegment(MovementSnapshot[] snapshots, OriginSample left, OriginSample right, float tickRate)
+    {
+        var start = Math.Clamp(left.Index, 0, snapshots.Length - 1);
+        var end = Math.Clamp(right.Index, 0, snapshots.Length - 1);
+        if (end <= start)
+        {
+            SetOrigin(ref snapshots[start], left.X, left.Y, left.Z);
+            return;
+        }
+
+        if (!CanUseVelocityForOriginSegment(snapshots, start, end, tickRate))
+        {
+            FillOriginSegmentLinear(snapshots, left, right, start, end);
+            return;
+        }
+
+        var rawX = left.X;
+        var rawY = left.Y;
+        var rawZ = left.Z;
+        for (var i = start; i < end; i++)
+        {
+            AddVelocityStep(snapshots, i, tickRate, ref rawX, ref rawY, ref rawZ);
+        }
+
+        var errorX = right.X - rawX;
+        var errorY = right.Y - rawY;
+        var errorZ = right.Z - rawZ;
+        rawX = left.X;
+        rawY = left.Y;
+        rawZ = left.Z;
+        var span = end - start;
+        for (var i = start; i <= end; i++)
+        {
+            if (i > start)
             {
-                sampleCursor++;
+                AddVelocityStep(snapshots, i - 1, tickRate, ref rawX, ref rawY, ref rawZ);
             }
 
-            var left = samples[sampleCursor];
-            var right = sampleCursor + 1 < samples.Length ? samples[sampleCursor + 1] : left;
-            var span = right.Index - left.Index;
-            var t = span > 0 ? Math.Clamp((float)(i - left.Index) / span, 0.0f, 1.0f) : 0.0f;
-
-            snapshots[i].OriginX = Lerp(left.X, right.X, t);
-            snapshots[i].OriginY = Lerp(left.Y, right.Y, t);
-            snapshots[i].OriginZ = Lerp(left.Z, right.Z, t);
+            var t = (float)(i - start) / span;
+            SetOrigin(
+                ref snapshots[i],
+                rawX + (errorX * t),
+                rawY + (errorY * t),
+                rawZ + (errorZ * t));
         }
+    }
+
+    private static bool CanUseVelocityForOriginSegment(MovementSnapshot[] snapshots, int start, int end, float tickRate)
+    {
+        if (!float.IsFinite(tickRate) || tickRate <= 0.0f)
+        {
+            return false;
+        }
+
+        for (var i = start; i <= end; i++)
+        {
+            if (!IsPlausibleVelocity(snapshots[i].VelX, snapshots[i].VelY, snapshots[i].VelZ))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void FillOriginSegmentLinear(
+        MovementSnapshot[] snapshots,
+        OriginSample left,
+        OriginSample right,
+        int start,
+        int end)
+    {
+        var span = end - start;
+        for (var i = start; i <= end; i++)
+        {
+            var t = span > 0 ? Math.Clamp((float)(i - start) / span, 0.0f, 1.0f) : 0.0f;
+            SetOrigin(
+                ref snapshots[i],
+                Lerp(left.X, right.X, t),
+                Lerp(left.Y, right.Y, t),
+                Lerp(left.Z, right.Z, t));
+        }
+    }
+
+    private static void AddVelocityStep(MovementSnapshot[] snapshots, int index, float tickRate, ref float x, ref float y, ref float z)
+    {
+        var next = Math.Min(index + 1, snapshots.Length - 1);
+        x += ((snapshots[index].VelX + snapshots[next].VelX) * 0.5f) / tickRate;
+        y += ((snapshots[index].VelY + snapshots[next].VelY) * 0.5f) / tickRate;
+        z += ((snapshots[index].VelZ + snapshots[next].VelZ) * 0.5f) / tickRate;
+    }
+
+    private static void SetOrigin(ref MovementSnapshot snapshot, float x, float y, float z)
+    {
+        snapshot.OriginX = x;
+        snapshot.OriginY = y;
+        snapshot.OriginZ = z;
     }
 
     private static float Lerp(float left, float right, float t)
     {
         return left + ((right - left) * t);
+    }
+
+    private static void RebuildVelocitiesFromOrigins(MovementSnapshot[] snapshots, float tickRate)
+    {
+        if (snapshots.Length == 0 || !float.IsFinite(tickRate) || tickRate <= 0.0f)
+        {
+            return;
+        }
+
+        for (var i = 0; i < snapshots.Length; i++)
+        {
+            var from = i + 1 < snapshots.Length
+                ? snapshots[i]
+                : i > 0
+                    ? snapshots[i - 1]
+                    : snapshots[i];
+            var to = i + 1 < snapshots.Length ? snapshots[i + 1] : snapshots[i];
+            var velX = (to.OriginX - from.OriginX) * tickRate;
+            var velY = (to.OriginY - from.OriginY) * tickRate;
+            var velZ = (to.OriginZ - from.OriginZ) * tickRate;
+
+            if (!IsPlausibleVelocity(velX, velY, velZ))
+            {
+                velX = 0.0f;
+                velY = 0.0f;
+                velZ = 0.0f;
+            }
+
+            snapshots[i].VelX = velX;
+            snapshots[i].VelY = velY;
+            snapshots[i].VelZ = velZ;
+        }
     }
 
     private static SubtickMove ReadCompactSubtick(BinaryReader reader)
@@ -1267,6 +1431,21 @@ public static class BotController
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int GetBotActiveWeaponDefDelegate(int slot);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int SetBuyPlanDelegate(int slot, [MarshalAs(UnmanagedType.LPStr)] string aliases);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int SetBuySkipDelegate(int slot);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ClearBuyPlanDelegate(int slot);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int ClearAllBuyPlansDelegate();
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int GetBuyPlanItemCountDelegate(int slot);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate ulong GetHookCallCountDelegate();

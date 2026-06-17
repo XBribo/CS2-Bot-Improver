@@ -354,6 +354,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
     public override void Unload(bool hotReload)
     {
+        ClearNativeBuySuppression();
         StopAllNativeReplays();
         ClearRetakeMoveTos(releaseBots: true);
         CancelReplayBundlePrewarm();
@@ -376,6 +377,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         LoadConfig();
         BotController.ResetCompatibility();
         _nativeReplayAvailable = BotController.IsCompatible();
+        ApplyNativeBuySuppression();
         _nativeReplayPreloadKeys.Clear();
         _preparedOpeningSessions.Clear();
         LoadDataset();
@@ -406,6 +408,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         ClearNativeWeaponState();
         _roundPrepared = false;
         _freezeEnded = false;
+        ApplyNativeBuySuppression();
         CaptureRoundLoadoutBudgets();
 
         // Cache bombsite centers for the "T entered the bombsite" opening end-condition. func_bomb_target
@@ -463,6 +466,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         _manifestReplayProjectiles.Clear();
         _enemyWatchStates.Clear();
         ClearNativeWeaponState();
+        ClearNativeBuySuppression();
         _roundPrepared = false;
         _freezeEnded = false;
         _bombPlantTime = -1f;
@@ -621,6 +625,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (_loadoutAppliedKeys.Count == 0)
         {
+            ApplyNativeBuySuppression();
             CaptureRoundLoadoutBudgets();
         }
 
@@ -649,8 +654,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         _roundPrepared = _pendingAssignments.Count > 0;
         PrepareOpeningSessionsForPendingAssignments();
 
-        // Apply the target loadout shortly after matching. MatchSelectionDelay is intentionally after
-        // BotBuy's buy/drop timers, so the budget snapshot includes default buy behavior.
+        // Apply the target loadout after matching. Native bot buying is suppressed before the budget
+        // snapshot, so the budget is current money plus carried equipment, not post-vanilla-buy state.
         if (scheduleLoadout && _roundPrepared && _config.ApplyLoadouts)
         {
             var delay = Math.Max(0f, _config.LoadoutApplyDelay);
@@ -726,6 +731,37 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         PreloadPreparedOpeningReplayWeapons(allowInventoryMutation: true);
+    }
+
+    private void ApplyNativeBuySuppression()
+    {
+        if (!_config.SuppressNativeBotBuying || !_nativeReplayAvailable)
+        {
+            return;
+        }
+
+        IEnumerable<CCSPlayerController> players;
+        try
+        {
+            players = Utilities.GetPlayers();
+        }
+        catch (NativeException)
+        {
+            return;
+        }
+
+        foreach (var player in players.Where(IsNativeBuySuppressionTarget))
+        {
+            BotController.SetBuySkip(player.Slot);
+        }
+    }
+
+    private void ClearNativeBuySuppression()
+    {
+        if (_nativeReplayAvailable)
+        {
+            BotController.ClearAllBuyPlans();
+        }
     }
 
     private void CaptureRoundLoadoutBudgets()
@@ -4933,6 +4969,15 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             && player.PlayerPawn.Value is { IsValid: true };
     }
 
+    private static bool IsNativeBuySuppressionTarget(CCSPlayerController player)
+    {
+        return player.IsValid
+            && player.IsBot
+            && player.Slot >= 0
+            && !player.HasBeenControlledByPlayerThisRound
+            && (player.Team == CsTeam.Terrorist || player.Team == CsTeam.CounterTerrorist);
+    }
+
     private static bool IsRoundBudgetOwner(CCSPlayerController player)
     {
         return player.IsValid
@@ -5003,6 +5048,7 @@ public sealed class ReplayConfig
     [Obsolete("Use DatasetPathTemplate.")]
     public string DatasetPath { get; set; } = "";
     public bool ApplyLoadouts { get; set; } = true;
+    public bool SuppressNativeBotBuying { get; set; } = true;
     public bool PreserveUsefulEquipment { get; set; } = true;
     public bool TransferSavedUtility { get; set; } = true;
     /// <summary>
