@@ -134,7 +134,7 @@ async function convert(file, rawOptions) {
     progress(`Parsing ticks for round ${segment.roundNumber}`, parsedTicks, totalWantedTicks);
     const rows = parseTicksForSegment(bytes, segment.ticks);
     parsedTicks += segment.ticks.length;
-    allRows.push(...rows);
+    appendArray(allRows, rows);
     progress(`Parsing ticks for round ${segment.roundNumber}`, parsedTicks, totalWantedTicks);
   }
 
@@ -862,6 +862,12 @@ function arrayOfObjects(value) {
     return rows;
   }
   return [];
+}
+
+function appendArray(target, values) {
+  for (const value of values) {
+    target.push(value);
+  }
 }
 
 function plain(value) {
