@@ -834,14 +834,15 @@ def build_direct_round_manifest(
     slot_by_steamid = direct_slot_map(freeze_rows, round_rows)
     steam_col = steamid_column(round_rows) if not round_rows.empty else steamid_column(freeze_rows)
     for steamid_value, player_rows in round_rows.groupby(steam_col):
-        steamid = str(steamid_value)
-        if steamid in ("0", "nan", "None", ""):
+        steamid = steamid_text(steamid_value)
+        if not steamid:
             continue
 
         player_rows = player_rows.sort_values("tick").drop_duplicates(subset=["tick"], keep="first")
         if len(player_rows) < 2:
             continue
-        freeze_player_rows = freeze_rows[freeze_rows[steamid_column(freeze_rows)].astype(str) == steamid]
+        freeze_steam_col = steamid_column(freeze_rows)
+        freeze_player_rows = freeze_rows[freeze_rows[freeze_steam_col].map(steamid_text) == steamid]
         baseline = sample_player_row(player_rows, economy_sample_tick, freeze_player_rows)
         team_num = int(row_value(baseline, "team_num", 0) or 0)
         if team_num not in (2, 3):
@@ -959,7 +960,7 @@ def filter_replay_rows(rows: Any) -> Any:
         rows = rows[rows["is_alive"] == True]
     steam_col = steamid_column(rows) if ("player_steamid" in rows or "steamid" in rows) else None
     if steam_col:
-        rows = rows[~rows[steam_col].astype(str).isin(["0", "nan", "None", ""])]
+        rows = rows[rows[steam_col].map(lambda value: bool(steamid_text(value)))]
     return rows.copy()
 
 
@@ -1021,8 +1022,8 @@ def direct_slot_map(freeze_rows: Any, round_rows: Any) -> dict[str, int]:
     if "team_num" in candidates:
         candidates = candidates[candidates["team_num"].isin([2, 3])]
     for _, row in candidates.sort_values(["team_num", steam_col] if "team_num" in candidates else [steam_col]).iterrows():
-        steamid = str(row.get(steam_col) or "")
-        if steamid and steamid not in ("0", "nan", "None") and steamid not in ordered:
+        steamid = steamid_text(row.get(steam_col))
+        if steamid and steamid not in ordered:
             ordered.append(steamid)
     for slot_index, steamid in enumerate(ordered):
         slot_by_steamid[steamid] = slot_index
@@ -1100,14 +1101,20 @@ def direct_frame_from_tick_row(row: dict[str, Any], freeze_tick: int, tickrate: 
 
 
 MAX_REPLAY_VELOCITY = 16384.0
+MAX_PARSED_VELOCITY_DISAGREEMENT = 2048.0
 
 
 def infer_frame_sequence(frames: list[dict[str, Any]], tickrate: int) -> list[dict[str, Any]]:
     for index, frame in enumerate(frames):
         for axis, key in enumerate(("velocity_x", "velocity_y", "velocity_z")):
             velocity = finite_float(frame.get(key))
-            if velocity is None or abs(velocity) > MAX_REPLAY_VELOCITY:
-                velocity = inferred_axis_velocity(frames, index, axis, tickrate)
+            inferred_velocity = inferred_axis_velocity(frames, index, axis, tickrate)
+            if (
+                velocity is None
+                or abs(velocity) > MAX_REPLAY_VELOCITY
+                or (index < 2 and abs(velocity - inferred_velocity) > MAX_PARSED_VELOCITY_DISAGREEMENT)
+            ):
+                velocity = inferred_velocity
             frame[key] = clamp_float(velocity, -MAX_REPLAY_VELOCITY, MAX_REPLAY_VELOCITY)
     return frames
 
@@ -1193,7 +1200,7 @@ def direct_grenades_for_player(
         if positioned_trajectory.empty:
             continue
         first = positioned_trajectory.iloc[0]
-        if str(first.get(steamid_column_name) or "") != steamid:
+        if steamid_text(first.get(steamid_column_name)) != steamid:
             continue
         second = positioned_trajectory.iloc[1] if len(positioned_trajectory) > 1 else first
         tick = int(first.get("tick", freeze_tick))
@@ -1298,12 +1305,25 @@ def find_plant_for_round(plant_events, tick_data, freeze_tick: int, next_freeze_
         if not tick_rows.empty:
             steam_col = steamid_column(tick_rows)
             if planter_steamid is not None and steam_col in tick_rows:
-                planter_rows = tick_rows[tick_rows[steam_col].astype(str) == str(planter_steamid)]
+                planter_rows = tick_rows[tick_rows[steam_col].map(steamid_text) == steamid_text(planter_steamid)]
                 if not planter_rows.empty:
                     row = planter_rows.iloc[0]
                     plant_pos = (float(row.get("X", 0) or 0), float(row.get("Y", 0) or 0), float(row.get("Z", 0) or 0))
             if plant_pos is None:
-                row = tick_rows.iloc[0]
+                playable_rows = tick_rows
+                if "team_num" in playable_rows:
+                    playable_rows = playable_rows[playable_rows["team_num"].isin([2, 3])]
+                if steam_col in playable_rows:
+                    playable_rows = playable_rows[playable_rows[steam_col].map(lambda value: bool(steamid_text(value)))]
+                if not playable_rows.empty:
+                    nonzero_rows = playable_rows[
+                        (playable_rows["X"].fillna(0).astype(float) != 0)
+                        | (playable_rows["Y"].fillna(0).astype(float) != 0)
+                        | (playable_rows["Z"].fillna(0).astype(float) != 0)
+                    ]
+                    row = (nonzero_rows if not nonzero_rows.empty else playable_rows).iloc[0]
+                else:
+                    row = tick_rows.iloc[0]
                 plant_pos = (float(row.get("X", 0) or 0), float(row.get("Y", 0) or 0), float(row.get("Z", 0) or 0))
     return plant_tick, plant_pos
 
@@ -1820,11 +1840,8 @@ def is_preload_weapon_def(def_index: int) -> bool:
 
 
 def steamid_u64(value: str) -> int:
-    try:
-        parsed = int(str(value))
-        return parsed if parsed >= 0 else 0
-    except ValueError:
-        return 0
+    text = steamid_text(value)
+    return int(text) if text else 0
 
 
 def first_frame_index_at_or_after(rows: list[Any], tick: int) -> int | None:
@@ -2419,7 +2436,7 @@ def nearest_player_frame(round_rows: Any, steamid: str, tick: int) -> Any | None
     if round_rows.empty:
         return None
     column = steamid_column(round_rows)
-    player_rows = round_rows[round_rows[column].astype(str) == steamid]
+    player_rows = round_rows[round_rows[column].map(steamid_text) == steamid]
     if player_rows.empty:
         return None
     player_rows = player_rows.assign(_distance=(player_rows["tick"] - tick).abs())
@@ -2440,11 +2457,32 @@ def handle_extract_error(args: argparse.Namespace, source_label: str, error: Exc
 
 
 def steamid_column(rows: Any) -> str:
-    if "player_steamid" in rows:
-        return "player_steamid"
     if "steamid" in rows:
         return "steamid"
+    if "player_steamid" in rows:
+        return "player_steamid"
     raise KeyError("No steamid/player_steamid column in tick data")
+
+
+def steamid_text(value: Any) -> str:
+    if is_missing(value):
+        return ""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text or text.lower() in {"nan", "none", "undefined"}:
+            return ""
+        if re.fullmatch(r"\d+", text):
+            return text
+        try:
+            parsed = int(float(text))
+            return str(parsed) if parsed > 0 else ""
+        except ValueError:
+            return ""
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return ""
+    return str(parsed) if parsed > 0 else ""
 
 
 def safe_sum(rows: Any, column: str) -> int:
