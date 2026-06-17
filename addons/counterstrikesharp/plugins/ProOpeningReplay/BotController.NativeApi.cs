@@ -77,7 +77,8 @@ public struct SubtickMove
 
 public static class BotController
 {
-    private const int ExpectedAbiVersion = 11;
+    private const int ExpectedAbiVersion = 12;
+    public const int KnifeDef = 9001;
     public const uint RecFormatVersionV4 = 4;
     public const int MovementSnapshotByteSize = 92;
     public const int ReplayTickByteSize = 192;
@@ -105,6 +106,7 @@ public static class BotController
     private static LoadReplayDelegate? _loadReplay;
     private static StartReplayDelegate? _startReplay;
     private static StopReplayDelegate? _stopReplay;
+    private static SetBotIdleDelegate? _setBotIdle;
     private static GetReplayCursorDelegate? _getReplayCursor;
     private static GetReplayTotalDelegate? _getReplayTotal;
     private static GetReplayTickDelegate? _getReplayTick;
@@ -298,6 +300,9 @@ public static class BotController
             return ok;
         });
 
+    public static bool SetBotIdle(int slot)
+        => Invoke(() => _setBotIdle!(slot) == 0);
+
     public static int GetReplayCursor(int slot)
         => Invoke(() => _getReplayCursor!(slot), -1);
 
@@ -441,6 +446,7 @@ public static class BotController
                 _loadReplay = LoadExport<LoadReplayDelegate>("BotController_LoadReplay");
                 _startReplay = LoadExport<StartReplayDelegate>("BotController_StartReplay");
                 _stopReplay = LoadExport<StopReplayDelegate>("BotController_StopReplay");
+                _setBotIdle = LoadExport<SetBotIdleDelegate>("BotController_SetBotIdle");
                 _getReplayCursor = LoadExport<GetReplayCursorDelegate>("BotController_GetReplayCursor");
                 _getReplayTotal = LoadExport<GetReplayTotalDelegate>("BotController_GetReplayTotal");
                 _getReplayTick = LoadExport<GetReplayTickDelegate>("BotController_GetReplayTick");
@@ -779,7 +785,7 @@ public static class BotController
             {
                 Pre = snapshots[i],
                 Post = snapshots[i + 1],
-                WeaponDefIndex = weaponDefs[i],
+                WeaponDefIndex = ToNativeWeaponDefIndex(weaponDefs[i]),
                 NumSubtick = subtickCounts[i]
             };
             expectedSubticks += ticks[i].NumSubtick;
@@ -1295,6 +1301,16 @@ public static class BotController
         }
     }
 
+    private static int ToNativeWeaponDefIndex(int defIndex)
+    {
+        if (defIndex == 42 || defIndex == 59 || defIndex is >= 500 and < 600 || defIndex == KnifeDef)
+        {
+            return KnifeDef;
+        }
+
+        return defIndex;
+    }
+
     public static bool IsThrowableUtilityWeaponDef(int weaponDefIndex)
         => weaponDefIndex is 43 or 44 or 45 or 46 or 47 or 48;
 
@@ -1416,6 +1432,9 @@ public static class BotController
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int StopReplayDelegate(int slot);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int SetBotIdleDelegate(int slot);
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int GetReplayCursorDelegate(int slot);

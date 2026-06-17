@@ -32,7 +32,7 @@ Build the runtime manifests and `.cs2rec` records used by the plugin:
 CS2-Bot-Improver/tools/pro_opening_replay/export_all_cs2rec.sh
 ```
 
-The `extract` command scans every `.dem` file and every `.dem` member inside supported archives, reads the demo header's actual map name, and writes each route to that map's manifest and record directory. Keep `--stride 1` for native replay parity; the `.cs2rec` reader consumes one record per simulation tick. New exports use the v3 gzip compact layout and are expanded to native tick buffers at load time. `--jobs 0` uses all available CPU cores. `--economy-sample-seconds` controls how long after freeze end the pro balance/loadout economy snapshot is taken. Use `--map de_inferno` only when intentionally filtering to one map. Use `--strict` only when debugging; by default the extractor skips a corrupt archive or demo and keeps building the rest.
+The `extract` command scans every `.dem` file and every `.dem` member inside supported archives, reads the demo header's actual map name, and writes each route to that map's manifest and record directory. Keep `--stride 1` for native replay parity; the `.cs2rec` reader consumes one record per simulation tick. New exports use the v4 Brotli compact layout and are expanded to native tick buffers at load time. `--jobs 0` uses all available CPU cores. Pro balance/loadout economy is sampled from the last available tick before freeze end. Use `--map de_inferno` only when intentionally filtering to one map. Use `--strict` only when debugging; by default the extractor skips a corrupt archive or demo and keeps building the rest.
 
 The wrapper script defaults to `DEMOS_DIR=~/code/betterbot/demos`, `JOBS=4`, `MAX_TASKS_PER_CHILD=1`, `RESET=1`, and enables a tqdm progress bar. Four workers is the default because demoparser's per-process memory spikes are high on large HLTV batches. Override those values from the shell when needed:
 
@@ -100,8 +100,8 @@ Default `config.json`:
   "StopOnAudibleEnemyNoise": false,
   "SpawnMatchTolerance": 24,
   "HumanSpawnBlockRadius": 72,
-  "MatchSelectionDelay": 3.2,
-  "LoadoutApplyDelay": 0.25,
+  "MatchSelectionDelay": 0,
+  "LoadoutApplyDelay": 0,
   "HandoffDistance": 1800,
   "HandoffFovDegrees": 90,
   "FootstepHandoffDistance": 1150,
@@ -123,8 +123,8 @@ Important options:
 - `StopOnAudibleEnemyNoise`: stops replay control when a nearby enemy footstep/sound is heard and turns the bot toward the sound before normal bot AI resumes.
 - `SuppressReplayAttackInput`: removes primary/secondary attack buttons only at runtime before native playback. Exported `.cs2rec` files keep the original attack inputs; grenades still use the manifest's projectile replay path.
 - `HumanSpawnBlockRadius`: excludes a pro start position when a human player is already occupying that space.
-- `MatchSelectionDelay`: seconds after round start before matching routes and budgets, normally after BotBuy has finished its buy/drop timers.
-- `LoadoutApplyDelay`: seconds after matching before the target replay loadout is applied.
+- `MatchSelectionDelay`: seconds after round start before matching routes and budgets. Keep this at `0` for full freeze/buy replay.
+- `LoadoutApplyDelay`: legacy delay for whole-loadout application. Opening replay now syncs visible weapons from the replay tick stream instead of copying a full loadout up front.
 - `HandoffDistance` and `HandoffFovDegrees`: stop replay when a live enemy is close enough and in front of the bot.
 - `FootstepHandoffDistance`: fallback hearing radius used for `player_footstep` events when the game event does not provide a radius.
 
@@ -144,8 +144,8 @@ css_proreplay_status
 
 At round start, the plugin waits for the configured match delay, then groups usable bots by T and CT. Each side must match one professional round as a team: every selected pro player loadout must fit the corresponding bot budget, and occupied human starts are excluded. If the live side is on a pistol round, only pistol replay rounds are eligible.
 
-During freeze, matched bots are moved to the selected pro start positions and receive the selected pro loadouts. At freeze end, each bot follows the extracted `.cs2rec` route through the native BotController replay path, with active weapon and due grenade throws replayed alongside movement. Spawned grenade projectiles consume the corresponding grenade from the bot inventory.
+During freeze, matched bots start following the extracted `.cs2rec` route through the native BotController replay path. Movement, view angles, current weapon slot, and grenade throws are replayed from round start, including the buy/freeze phase. Opening replay does not copy a full pro loadout up front; it gives and switches weapons as the replay tick stream asks for them.
 
-Loadouts are copied from the selected pro player. The bot money is set to its folded budget minus the target loadout value, where the budget includes current money plus useful carried equipment and nearby dropped weapons assigned to the closest owner.
+Replay candidates are still filtered by folded budget, where the budget includes current money plus useful carried equipment and nearby dropped weapons assigned to the closest owner.
 
 Replay control stops for a bot when the opening finishes, the bot or attacker is hurt, an enemy enters the configured handoff cone, the bot is flashed, or a nearby enemy footstep/sound is heard. Normal CS2 bot behavior then takes over for the rest of the round.

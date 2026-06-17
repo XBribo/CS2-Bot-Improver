@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import brotli
+from collections import Counter
 import concurrent.futures
 import datetime as dt
 from dataclasses import dataclass
@@ -371,7 +372,7 @@ def main() -> int:
     extract_parser.add_argument("--records-dir", help="Directory/template for generated .cs2rec files. Defaults to <manifest stem>_records next to each manifest.")
     extract_parser.add_argument("--map", default="", help="Optional map filter. Empty means parse every demo and route by its actual map.")
     extract_parser.add_argument("--max-round-seconds", type=float, default=140.0, help="Fallback round length only when round_end/next freeze is unavailable.")
-    extract_parser.add_argument("--economy-sample-seconds", type=float, default=2.0, help="Seconds after round_freeze_end used to sample pro balance/loadout/team economy.")
+    extract_parser.add_argument("--economy-sample-seconds", type=float, default=0.0, help="Deprecated; pro economy is sampled from the last available tick before round_freeze_end.")
     extract_parser.add_argument("--tickrate", type=int, default=64)
     extract_parser.add_argument("--stride", type=int, default=1)
     extract_parser.add_argument("--demo-source", default="hltv")
@@ -714,6 +715,11 @@ def export_direct_demo(
         print(f"Plant event parse failed: {plant_error}")
         plant_events = None
     try:
+        round_start_events = parser.parse_event("round_start")
+    except Exception as round_start_error:
+        print(f"Round-start event parse failed: {round_start_error}")
+        round_start_events = None
+    try:
         round_end_events = parser.parse_event("round_end")
     except Exception as round_end_error:
         print(f"Round-end event parse failed: {round_end_error}")
@@ -724,15 +730,24 @@ def export_direct_demo(
     stride = max(1, int(args.stride))
     wanted_tick_set: set[int] = set()
     economy_sample_ticks: dict[int, int] = {}
+    round_start_ticks: dict[int, int] = {}
     for index, freeze_tick in enumerate(freeze_ticks):
+        previous_freeze_tick = freeze_ticks[index - 1] if index > 0 else None
         next_freeze_tick = freeze_ticks[index + 1] if index + 1 < len(freeze_ticks) else None
+        round_start_tick = find_round_start_tick_for_freeze(round_start_events, freeze_tick, previous_freeze_tick)
+        if round_start_tick is None:
+            round_start_tick = freeze_tick
+        round_start_ticks[freeze_tick] = round_start_tick
         round_end_tick = find_round_end_tick_for_round(round_end_events, freeze_tick, next_freeze_tick)
         if round_end_tick is None:
             round_end_tick = (next_freeze_tick - 1) if next_freeze_tick is not None else freeze_tick + max_round_ticks
-        economy_sample_tick = min(round_end_tick, freeze_tick + max(0, int(round(args.economy_sample_seconds * args.tickrate))))
+        economy_sample_tick = max(round_start_tick, freeze_tick - 1)
         economy_sample_ticks[freeze_tick] = economy_sample_tick
+        wanted_tick_set.add(round_start_tick)
+        wanted_tick_set.add(freeze_tick)
         wanted_tick_set.add(economy_sample_tick)
-        wanted_tick_set.update(range(freeze_tick, round_end_tick + 1, stride))
+        wanted_tick_set.update(range(round_start_tick, freeze_tick + 1))
+        wanted_tick_set.update(range(round_start_tick, round_end_tick + 1, stride))
     wanted_ticks = sorted(wanted_tick_set)
     tick_data = parse_ticks_strict(parser, wanted_ticks)
     grenade_data = parse_grenades(parser)
@@ -754,6 +769,7 @@ def export_direct_demo(
             source_label=source_label,
             map_name=stored_map_name,
             round_number=round_number,
+            round_start_tick=round_start_ticks.get(freeze_tick, freeze_tick),
             freeze_tick=freeze_tick,
             round_end_tick=find_round_end_tick_for_round(round_end_events, freeze_tick, next_freeze_tick),
             max_round_ticks=max_round_ticks,
@@ -793,6 +809,7 @@ def build_direct_round_manifest(
     source_label: str,
     map_name: str,
     round_number: int,
+    round_start_tick: int,
     freeze_tick: int,
     round_end_tick: int | None,
     max_round_ticks: int,
@@ -811,20 +828,11 @@ def build_direct_round_manifest(
 ) -> dict[str, Any]:
     if round_end_tick is None:
         round_end_tick = (next_freeze_tick - 1) if next_freeze_tick is not None else freeze_tick + max_round_ticks
+    round_start_tick = min(round_start_tick, freeze_tick)
     plant_tick, plant_pos = find_plant_for_round(plant_events, tick_data, freeze_tick, next_freeze_tick)
-    if "total_rounds_played" in tick_data:
-        round_rows = tick_data[
-            (tick_data["total_rounds_played"] == round_number)
-            & (tick_data["tick"] >= freeze_tick)
-            & (tick_data["tick"] <= round_end_tick)
-        ].copy()
-    else:
-        round_rows = tick_data[(tick_data["tick"] >= freeze_tick) & (tick_data["tick"] <= round_end_tick)].copy()
+    round_rows = tick_data[(tick_data["tick"] >= round_start_tick) & (tick_data["tick"] <= round_end_tick)].copy()
 
     round_rows = filter_replay_rows(round_rows)
-    active_rows = active_replay_rows(round_rows)
-    if not active_rows.empty:
-        round_rows = active_rows
     economy_rows = sample_round_rows_at_tick(round_rows, economy_sample_tick)
     if economy_rows.empty:
         economy_rows = freeze_rows
@@ -852,7 +860,6 @@ def build_direct_round_manifest(
             direct_frame_from_tick_row(row.to_dict(), freeze_tick, tickrate)
             for _, row in player_rows.iterrows()
         ]
-        frames = [frame for frame in frames if int(frame["relative_tick"]) >= 0]
         frames = infer_frame_sequence(frames, tickrate)
         if len(frames) < 2:
             continue
@@ -864,6 +871,12 @@ def build_direct_round_manifest(
 
         inventory = normalize_inventory(row_value(baseline, "inventory", []))
         inventory_def_indexes = normalize_inventory_def_indexes(row_value(baseline, "inventory_as_ids", []))
+        freeze_inventory_snapshots = build_freeze_inventory_snapshots(
+            player_rows,
+            round_start_tick,
+            freeze_tick,
+            tickrate,
+        )
         player_name = str(row_value(baseline, "player_name", row_value(baseline, "name", steamid)) or steamid)
         safe_player = sanitize_filename(f"{team_num}_{slot_by_steamid.get(steamid, 0)}_{steamid or player_name}")
         rec_key = f"{round_key}/{safe_player}_round"
@@ -885,6 +898,9 @@ def build_direct_round_manifest(
         round_info = cs2rec_segment_info(frames, list(route_entry.weapon_defs))
         if round_info is None:
             continue
+        freeze_end_index = first_frame_index_at_or_after(frames, freeze_tick)
+        if freeze_end_index is None:
+            freeze_end_index = 0
 
         retake_info = None
         retake_start = None
@@ -900,22 +916,25 @@ def build_direct_round_manifest(
             "slot": int(slot_by_steamid.get(steamid, 0)),
             "startBalance": int(row_value(baseline, "balance", 0) or 0),
             "balance": int(row_value(baseline, "balance", 0) or 0),
-            "economySampleRelativeTick": max(0, economy_sample_tick - freeze_tick),
-            "economySampleTime": rounded_float(max(0, economy_sample_tick - freeze_tick) / tickrate, 4),
+            "economySampleRelativeTick": economy_sample_tick - freeze_tick,
+            "economySampleTime": rounded_float((economy_sample_tick - freeze_tick) / tickrate, 4),
             "equipmentValue": int(row_value(baseline, "current_equip_value", row_value(baseline, "round_start_equip_value", 0)) or 0),
             "armorValue": int(row_value(baseline, "armor_value", 0) or 0),
             "hasHelmet": bool(row_value(baseline, "has_helmet", False)),
             "hasDefuser": bool(row_value(baseline, "has_defuser", False)),
             "inventory": inventory,
             "inventoryDefIndexes": inventory_def_indexes,
+            "freezeInventorySnapshots": freeze_inventory_snapshots,
             "recPath": bundle_rec_path,
             "recKey": rec_key,
             "duration": rounded_float(round_info["duration"], 4),
+            "freezeEndTickIndex": max(0, int(freeze_end_index)),
+            "freezeEndTime": rounded_float((freeze_tick - round_start_tick) / tickrate, 4),
             "firstWeaponDefIndex": round_info["firstWeaponDefIndex"],
             "preloadWeaponDefIndexes": round_info["preloadWeaponDefIndexes"],
             "startFrame": round_info["startFrame"],
             "endFrame": round_info["endFrame"],
-            "grenades": direct_grenades_for_player(grenade_data, round_rows, steamid, freeze_tick, round_end_tick - freeze_tick, tickrate),
+            "grenades": direct_grenades_for_player(grenade_data, round_rows, steamid, round_start_tick, freeze_tick, round_end_tick, tickrate),
         }
         if retake_info is not None:
             player_payload.update(
@@ -934,9 +953,12 @@ def build_direct_round_manifest(
         "id": round_key,
         "demoPath": source_label,
         "roundNumber": round_number,
+        "freezeStartTick": round_start_tick,
         "freezeEndTick": freeze_tick,
-        "economySampleRelativeTick": max(0, economy_sample_tick - freeze_tick),
-        "economySampleTime": rounded_float(max(0, economy_sample_tick - freeze_tick) / tickrate, 4),
+        "freezeTimeTicks": max(0, freeze_tick - round_start_tick),
+        "freezeTime": rounded_float(max(0, freeze_tick - round_start_tick) / tickrate, 4),
+        "economySampleRelativeTick": economy_sample_tick - freeze_tick,
+        "economySampleTime": rounded_float((economy_sample_tick - freeze_tick) / tickrate, 4),
         "teamEconomies": direct_team_economies(economy_rows),
         "players": sorted(players, key=lambda player: (int(player["teamNum"]), int(player["slot"]))),
     }
@@ -979,13 +1001,13 @@ def sample_round_rows_at_tick(rows: Any, sample_tick: int) -> Any:
 
 def sample_player_row(player_rows: Any, sample_tick: int, fallback_rows: Any | None = None) -> Any:
     if player_rows is not None and not player_rows.empty and "tick" in player_rows:
-        after = player_rows[player_rows["tick"] >= sample_tick]
-        if not after.empty:
-            return after.iloc[0]
-
         before = player_rows[player_rows["tick"] <= sample_tick]
         if not before.empty:
             return before.iloc[-1]
+
+        after = player_rows[player_rows["tick"] >= sample_tick]
+        if not after.empty:
+            return after.iloc[0]
 
         return player_rows.iloc[0]
 
@@ -993,6 +1015,75 @@ def sample_player_row(player_rows: Any, sample_tick: int, fallback_rows: Any | N
         return fallback_rows.iloc[0]
 
     return player_rows.iloc[0]
+
+
+def build_freeze_inventory_snapshots(player_rows: Any, round_start_tick: int, freeze_tick: int, tickrate: int) -> list[dict[str, Any]]:
+    if player_rows.empty or "tick" not in player_rows:
+        return []
+
+    rows = player_rows[(player_rows["tick"] >= round_start_tick) & (player_rows["tick"] <= freeze_tick)].copy()
+    if rows.empty:
+        return []
+
+    rows = rows.sort_values("tick").drop_duplicates(subset=["tick"], keep="first")
+    snapshots: list[dict[str, Any]] = []
+    previous_items: Counter[str] | None = None
+    previous_defs: Counter[int] | None = None
+
+    for _, row in rows.iterrows():
+        row_dict = row.to_dict()
+        if not row_has_inventory_snapshot(row_dict):
+            continue
+
+        tick = required_int(row_dict, "tick")
+        items = Counter(normalize_inventory(row_value(row_dict, "inventory", [])))
+        defs = Counter(normalize_inventory_def_indexes(row_value(row_dict, "inventory_as_ids", [])))
+        payload = freeze_inventory_tick_payload(tick, freeze_tick, tickrate)
+
+        if previous_items is None or previous_defs is None:
+            payload["inventory"] = expand_counter(items)
+            payload["inventoryDefIndexes"] = expand_counter(defs)
+            snapshots.append(payload)
+        else:
+            added_items = expand_counter(items - previous_items)
+            removed_items = expand_counter(previous_items - items)
+            added_defs = expand_counter(defs - previous_defs)
+            removed_defs = expand_counter(previous_defs - defs)
+            if added_items or removed_items or added_defs or removed_defs:
+                if added_items:
+                    payload["added"] = added_items
+                if removed_items:
+                    payload["removed"] = removed_items
+                if added_defs:
+                    payload["addedDefIndexes"] = added_defs
+                if removed_defs:
+                    payload["removedDefIndexes"] = removed_defs
+                snapshots.append(payload)
+
+        previous_items = items
+        previous_defs = defs
+
+    return snapshots
+
+
+def row_has_inventory_snapshot(row: Any) -> bool:
+    return not is_missing(row_value(row, "inventory")) or not is_missing(row_value(row, "inventory_as_ids"))
+
+
+def freeze_inventory_tick_payload(tick: int, freeze_tick: int, tickrate: int) -> dict[str, Any]:
+    relative_tick = tick - freeze_tick
+    return {
+        "tick": tick,
+        "relativeTick": relative_tick,
+        "time": rounded_float(relative_tick / tickrate, 4),
+    }
+
+
+def expand_counter(counter: Counter[Any]) -> list[Any]:
+    items: list[Any] = []
+    for item, count in sorted(counter.items(), key=lambda entry: entry[0]):
+        items.extend([item] * max(0, int(count)))
+    return items
 
 
 def active_replay_rows(rows: Any) -> Any:
@@ -1173,8 +1264,9 @@ def direct_grenades_for_player(
     grenade_data: Any,
     round_rows: Any,
     steamid: str,
+    round_start_tick: int,
     freeze_tick: int,
-    opening_ticks: int,
+    round_end_tick: int,
     tickrate: int,
 ) -> list[dict[str, Any]]:
     if grenade_data.empty or "tick" not in grenade_data:
@@ -1188,8 +1280,7 @@ def direct_grenades_for_player(
     if not all([entity_column, steamid_column_name, type_column, x_column, y_column, z_column]):
         return []
 
-    round_end_tick = freeze_tick + opening_ticks
-    round_grenades = grenade_data[(grenade_data["tick"] >= freeze_tick) & (grenade_data["tick"] <= round_end_tick)].copy()
+    round_grenades = grenade_data[(grenade_data["tick"] >= round_start_tick) & (grenade_data["tick"] <= round_end_tick)].copy()
     if round_grenades.empty:
         return []
 
@@ -1204,8 +1295,6 @@ def direct_grenades_for_player(
             continue
         second = positioned_trajectory.iloc[1] if len(positioned_trajectory) > 1 else first
         tick = int(first.get("tick", freeze_tick))
-        if tick < freeze_tick:
-            continue
 
         player_frame = nearest_player_frame(round_rows, steamid, tick)
         delta_ticks = max(1, int(second.get("tick", tick)) - tick)
@@ -1279,6 +1368,19 @@ def find_round_end_tick_for_round(round_end_events, freeze_tick: int, next_freez
     if matches.empty:
         return None
     return int(matches["tick"].iloc[0])
+
+
+def find_round_start_tick_for_freeze(round_start_events, freeze_tick: int, previous_freeze_tick: int | None = None) -> int | None:
+    if round_start_events is None or getattr(round_start_events, "empty", True):
+        return None
+    if "tick" not in round_start_events:
+        return None
+    matches = round_start_events[round_start_events["tick"] <= freeze_tick]
+    if previous_freeze_tick is not None:
+        matches = matches[matches["tick"] > previous_freeze_tick]
+    if matches.empty:
+        return None
+    return int(matches["tick"].max())
 
 
 def find_plant_for_round(plant_events, tick_data, freeze_tick: int, next_freeze_tick: int | None = None):

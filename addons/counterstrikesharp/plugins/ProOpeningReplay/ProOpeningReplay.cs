@@ -10,6 +10,7 @@ using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -72,6 +73,9 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private readonly Random _random = new();
     private bool _roundPrepared;
     private bool _freezeEnded;
+    private bool _openingReplayStartQueued;
+    private float _roundStartTime = -1f;
+    private float _freezePeriodStartTime = -1f;
     private CancellationTokenSource? _replayBundlePrewarmCancellation;
     private int _replayBundlePrewarmGeneration;
     private int _replayBundlePrewarmTotal;
@@ -408,6 +412,15 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         ClearNativeWeaponState();
         _roundPrepared = false;
         _freezeEnded = false;
+        _openingReplayStartQueued = false;
+        _roundStartTime = Server.CurrentTime;
+        _freezePeriodStartTime = IsFreezePeriod() ? Server.CurrentTime : -1f;
+        if (IsWarmupPeriod())
+        {
+            ClearNativeBuySuppression();
+            return HookResult.Continue;
+        }
+
         CaptureRoundLoadoutBudgets();
 
         // Cache bombsite centers for the "T entered the bombsite" opening end-condition. func_bomb_target
@@ -425,6 +438,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return HookResult.Continue;
         }
 
+        ApplyNativeBuySuppressionForCurrentBots();
         ScheduleFreezePrepareAttempts();
         return HookResult.Continue;
     }
@@ -432,20 +446,21 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private HookResult OnRoundFreezeEnd(EventRoundFreezeEnd @event, GameEventInfo info)
     {
         _freezeEnded = true;
+        if (IsWarmupPeriod())
+        {
+            ClearNativeBuySuppression();
+            return HookResult.Continue;
+        }
+
         if (!CanUseDataset())
         {
             return HookResult.Continue;
         }
 
-        if (_loadoutAppliedKeys.Count == 0
+        if (!OpeningSessionsCoverCurrentBots()
             && (!_roundPrepared || _pendingAssignments.Count == 0 || !AssignmentsCoverCurrentBots()))
         {
             PrepareRound(scheduleLoadout: false);
-        }
-
-        if (_config.ApplyLoadouts)
-        {
-            ApplyLoadoutsForPendingAssignments(allowAfterFreezeEnd: true);
         }
 
         StartReplaySessions();
@@ -467,8 +482,11 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         _enemyWatchStates.Clear();
         ClearNativeWeaponState();
         ClearNativeBuySuppression();
+        _openingReplayStartQueued = false;
         _roundPrepared = false;
         _freezeEnded = false;
+        _roundStartTime = -1f;
+        _freezePeriodStartTime = -1f;
         _bombPlantTime = -1f;
         _bombDetonationTime = -1f;
         _bombPos = null;
@@ -485,7 +503,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         {
             AddTimer(firstDelay + extraDelay, () =>
             {
-                if (_freezeEnded || _loadoutAppliedKeys.Count > 0 || AssignmentsCoverCurrentBots())
+                if (_freezeEnded
+                    || OpeningSessionsCoverCurrentBots())
                 {
                     return;
                 }
@@ -661,23 +680,9 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
         PrepareOpeningSessionsForPendingAssignments();
 
-        // Apply the target loadout after matching. Native bot buying is suppressed before the budget
-        // snapshot, so the budget is current money plus carried equipment, not post-vanilla-buy state.
-        if (scheduleLoadout && _roundPrepared && _config.ApplyLoadouts)
+        if (_roundPrepared)
         {
-            var delay = Math.Max(0f, _config.LoadoutApplyDelay);
-            if (delay <= 0f)
-            {
-                ApplyLoadoutsForPendingAssignments();
-            }
-            else
-            {
-                AddTimer(delay, () => ApplyLoadoutsForPendingAssignments());
-            }
-        }
-        else if (_roundPrepared && !_config.ApplyLoadouts)
-        {
-            PreloadPreparedOpeningReplayWeapons(allowInventoryMutation: !_freezeEnded);
+            StartReplaySessions();
         }
     }
 
@@ -689,6 +694,20 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             .ToList();
 
         return keys.Count > 0 && keys.All(key => _pendingAssignments.ContainsKey(key));
+    }
+
+    private bool OpeningSessionsCoverCurrentBots()
+    {
+        var activeKeys = _sessions
+            .Where(session => session.Kind == ReplaySessionKind.Opening)
+            .Select(session => PlayerKey(session.Player))
+            .ToHashSet();
+        var keys = Utilities.GetPlayers()
+            .Where(IsUsableBot)
+            .Select(PlayerKey)
+            .ToList();
+
+        return keys.Count > 0 && keys.All(key => activeKeys.Contains(key));
     }
 
     private void ApplyLoadoutsForPendingAssignments(bool allowAfterFreezeEnd = false)
@@ -742,6 +761,11 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
     private void ApplyNativeBuySuppressionForPendingAssignments()
     {
+        ApplyNativeBuySuppressionForCurrentBots();
+    }
+
+    private void ApplyNativeBuySuppressionForCurrentBots()
+    {
         if (!_config.SuppressNativeBotBuying || !_nativeReplayAvailable)
         {
             return;
@@ -759,14 +783,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         foreach (var player in players.Where(IsNativeBuySuppressionTarget))
         {
-            if (_pendingAssignments.ContainsKey(PlayerKey(player)))
-            {
-                BotController.SetBuySkip(player.Slot);
-            }
-            else
-            {
-                BotController.ClearBuyPlan(player.Slot);
-            }
+            BotController.SetBuySkip(player.Slot);
         }
     }
 
@@ -931,13 +948,35 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
     private void StartReplaySessions()
     {
-        StopAllNativeReplays();
-        _sessions.Clear();
+        var existingOpeningKeys = _sessions
+            .Where(session => session.Kind == ReplaySessionKind.Opening)
+            .Select(session => PlayerKey(session.Player))
+            .ToHashSet();
+        if (existingOpeningKeys.Count > 0 && OpeningSessionsCoverCurrentBots())
+        {
+            return;
+        }
+
+        if (existingOpeningKeys.Count == 0 && TryDelayOpeningReplayStart())
+        {
+            return;
+        }
+
+        if (existingOpeningKeys.Count == 0)
+        {
+            StopAllNativeReplays();
+            _sessions.Clear();
+        }
         var startTime = Server.CurrentTime;
 
         foreach (var player in Utilities.GetPlayers().Where(IsUsableBot))
         {
             var key = PlayerKey(player);
+            if (existingOpeningKeys.Contains(key))
+            {
+                continue;
+            }
+
             if (!_pendingAssignments.TryGetValue(key, out var assignment))
             {
                 continue;
@@ -948,15 +987,25 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 ? preparedSession
                 : null;
             var frames = prepared?.Frames ?? BuildSessionFrames(assignment.Player, ReplaySessionKind.Opening);
+            var nativeStartTick = NativeReplayStartTick(assignment.Player, ReplaySessionKind.Opening);
+            var frameTimeOffset = ReplayTimeOffset(nativeStartTick);
 
             if (frames.Count == 0)
             {
                 continue;
             }
 
-            var grenades = prepared?.Grenades ?? BuildSessionGrenades(assignment.Player, ReplaySessionKind.Opening);
+            var grenades = BuildSessionGrenades(assignment.Player, ReplaySessionKind.Opening, frameTimeOffset);
 
-            var session = new ReplaySession(player, assignment.Round, assignment.Player, frames, grenades, startTime);
+            var session = new ReplaySession(
+                player,
+                assignment.Round,
+                assignment.Player,
+                frames,
+                grenades,
+                startTime,
+                frameTimeOffset: frameTimeOffset,
+                nativeReplayStartTick: nativeStartTick);
             if (prepared != null)
             {
                 session.NativeReplayPreloaded = prepared.NativeReplayPreloaded;
@@ -977,11 +1026,86 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             _sessions.Add(session);
         }
 
-        // Radio callouts: announce T-side opening target to teammates
-        if (_sessions.Count > 0 && _config.RadioCallouts)
+    }
+
+    private bool TryDelayOpeningReplayStart()
+    {
+        if (_freezeEnded || _roundStartTime < 0f || _pendingAssignments.Count == 0)
         {
-            AnnounceOpeningRadio();
+            return false;
         }
+
+        if (_config.AlignOpeningFreezeEnd && _freezePeriodStartTime < 0f)
+        {
+            if (IsFreezePeriod())
+            {
+                _freezePeriodStartTime = Server.CurrentTime;
+            }
+            else
+            {
+                QueueOpeningReplayStart(0.05f);
+                return true;
+            }
+        }
+
+        var delay = OpeningReplayStartDelaySeconds();
+        if (delay <= 0.01f)
+        {
+            return false;
+        }
+
+        QueueOpeningReplayStart(delay);
+        return true;
+    }
+
+    private void QueueOpeningReplayStart(float delay)
+    {
+        if (_openingReplayStartQueued)
+        {
+            return;
+        }
+
+        _openingReplayStartQueued = true;
+        AddTimer(Math.Max(0.01f, delay), () =>
+        {
+            _openingReplayStartQueued = false;
+            if (!_freezeEnded && CanUseDataset())
+            {
+                StartReplaySessions();
+            }
+        });
+    }
+
+    private float OpeningReplayStartDelaySeconds()
+    {
+        if (!_config.AlignOpeningFreezeEnd)
+        {
+            return 0f;
+        }
+
+        var replayFreezeSeconds = _pendingAssignments.Values
+            .Select(assignment => ReplayFreezeSeconds(assignment.Player))
+            .DefaultIfEmpty(0f)
+            .Max();
+        if (replayFreezeSeconds <= 0.001f)
+        {
+            return 0f;
+        }
+
+        var freezeEndTime = CurrentLiveFreezeEndTime();
+        if (freezeEndTime > Server.CurrentTime)
+        {
+            return Math.Max(0f, freezeEndTime - replayFreezeSeconds - Server.CurrentTime);
+        }
+
+        var liveFreezeSeconds = CurrentLiveFreezeSeconds(replayFreezeSeconds);
+        var anchorTime = _freezePeriodStartTime >= 0f ? _freezePeriodStartTime : _roundStartTime;
+        if (anchorTime < 0f)
+        {
+            return Math.Max(0f, liveFreezeSeconds - replayFreezeSeconds);
+        }
+
+        return Math.Max(0f, anchorTime + liveFreezeSeconds - replayFreezeSeconds - Server.CurrentTime);
     }
 
     private static bool IsPreparedForAssignment(PreparedOpeningSession prepared, ReplayAssignment assignment)
@@ -1107,11 +1231,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             startedCount++;
         }
 
-        // Radio callouts for retake
-        if (startedCount > 0 && _config.RadioCallouts)
-        {
-            AnnounceRetakeRadio(currentSiteIndex);
-        }
     }
 
     private static List<ReplayFrame> BuildSessionFrames(ReplayPlayer player, ReplaySessionKind kind)
@@ -1152,11 +1271,15 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return player.RecKey;
     }
 
-    private static List<ReplayGrenade> BuildSessionGrenades(ReplayPlayer player, ReplaySessionKind kind)
+    private static List<ReplayGrenade> BuildSessionGrenades(ReplayPlayer player, ReplaySessionKind kind, float frameTimeOffset = 0f)
     {
         if (kind != ReplaySessionKind.Retake)
         {
-            return player.Grenades.ToList();
+            var freezeEndTime = Math.Max(0f, player.FreezeEndTime);
+            return player.Grenades
+                .Select(grenade => CloneGrenadeAtSessionTime(grenade, frameTimeOffset - freezeEndTime, 0))
+                .OrderBy(grenade => grenade.Time)
+                .ToList();
         }
 
         var startTime = Math.Max(0f, player.RetakeStartTime > 0.001f ? player.RetakeStartTime : player.RetakeStartFrame?.Time ?? 0f);
@@ -1188,83 +1311,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     }
 
     private sealed record RetakeCandidate(ReplayRound Round, ReplayPlayer ProPlayer, ReplayFrame StartFrame);
-
-    // ═══════════════════════════════════════════════════════════
-    //  Radio callouts — announce bot intentions to human players
-    // ═══════════════════════════════════════════════════════════
-
-    private static readonly string[] OpeningCallsA = ["Going A", "Rush A", "Execute A", "Heading A"];
-    private static readonly string[] OpeningCallsB = ["Going B", "Rush B", "Execute B", "Heading B"];
-    private static readonly string[] OpeningCallsGeneric = ["Let's go", "Move out", "Go go go"];
-    private static readonly string[] RetakeCalls = ["Retake!", "Go go go!", "Let's retake", "Push together"];
-    private static readonly string[] HoldCalls = ["Hold position", "Stay alive", "Play time"];
-
-    private void AnnounceOpeningRadio()
-    {
-        // Pick one T-side session to announce the opening target.
-        var tSession = _sessions.FirstOrDefault(s => s.Player.Team == CsTeam.Terrorist);
-        if (tSession == null) return;
-
-        // Determine destination by looking at the last frame of the replay
-        var lastFrame = tSession.Frames.Count > 0 ? tSession.Frames[^1] : null;
-        string[] callPool;
-        if (lastFrame != null && _datasetSiteCentroids.Count >= 2)
-        {
-            var destPos = new Vector(lastFrame.X, lastFrame.Y, lastFrame.Z);
-            var siteIdx = ClassifyBySiteCentroids(destPos);
-            callPool = siteIdx == 0 ? OpeningCallsA : OpeningCallsB;
-        }
-        else
-        {
-            callPool = OpeningCallsGeneric;
-        }
-
-        var call = callPool[_random.Next(callPool.Length)];
-        var botTeam = tSession.Player.Team;
-        var teamColor = botTeam == CsTeam.Terrorist ? ChatColors.Yellow : ChatColors.Blue;
-        var botName = tSession.PlayerName;
-        Server.NextFrame(() =>
-        {
-            foreach (var player in Utilities.GetPlayers())
-            {
-                if (!player.IsValid || player.IsBot || player.Team != botTeam) continue;
-                player.PrintToChat($" {teamColor}☆ {botName}{ChatColors.Default}: {call}");
-            }
-        });
-    }
-
-    private void AnnounceRetakeRadio(int siteIndex)
-    {
-        // CT: announce retake push
-        var ctSession = _sessions.FirstOrDefault(s =>
-            s.Kind == ReplaySessionKind.Retake && s.Player.Team == CsTeam.CounterTerrorist);
-
-        // T: announce hold on site
-        var tSession = _sessions.FirstOrDefault(s =>
-            s.Kind == ReplaySessionKind.Retake && s.Player.Team == CsTeam.Terrorist);
-
-        var siteName = siteIndex == 0 ? "A" : "B";
-        Server.NextFrame(() =>
-        {
-            var players = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHLTV && !p.IsBot).ToList();
-            if (players.Count == 0) return;
-
-            if (ctSession != null)
-            {
-                var call = RetakeCalls[_random.Next(RetakeCalls.Length)];
-                var botName = ctSession.PlayerName;
-                foreach (var p in players.Where(p => p.Team == CsTeam.CounterTerrorist))
-                    p.PrintToChat($" {ChatColors.Blue}☆ {botName}{ChatColors.Default}: {call} [{siteName}]");
-            }
-            if (tSession != null)
-            {
-                var call = HoldCalls[_random.Next(HoldCalls.Length)];
-                var botName = tSession.PlayerName;
-                foreach (var p in players.Where(p => p.Team == CsTeam.Terrorist))
-                    p.PrintToChat($" {ChatColors.Yellow}☆ {botName}{ChatColors.Default}: {call} [{siteName}]");
-            }
-        });
-    }
 
     // Classify a world position by index of the nearest entry in _bombSiteCenters. Returns -1 if
     // we have no site centers cached or the position is null. Uses full 3D distance to correctly
@@ -1361,8 +1407,40 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return bestIndex;
     }
 
+    private int NativeReplayStartTick(ReplayPlayer replayPlayer, ReplaySessionKind kind)
+    {
+        if (kind == ReplaySessionKind.Retake)
+        {
+            return Math.Max(0, replayPlayer.RetakeStartTickIndex);
+        }
+
+        if (!_config.AlignOpeningFreezeEnd || replayPlayer.FreezeEndTickIndex <= 0)
+        {
+            return 0;
+        }
+
+        if (_freezeEnded)
+        {
+            return Math.Max(0, replayPlayer.FreezeEndTickIndex);
+        }
+
+        var liveFreezeTicks = CurrentLiveFreezeTicks(replayPlayer);
+        return Math.Clamp(replayPlayer.FreezeEndTickIndex - liveFreezeTicks, 0, replayPlayer.FreezeEndTickIndex);
+    }
+
+    private float ReplayTimeOffset(int startTick)
+        => startTick <= 0 ? 0f : startTick / (float)ReplayTickRate();
+
+    private int ReplayTickRate()
+        => Math.Max(1, _dataset?.TickRate ?? 64);
+
     private void OnTick()
     {
+        if (!_freezeEnded && !IsWarmupPeriod() && CanUseDataset())
+        {
+            ApplyNativeBuySuppressionForCurrentBots();
+        }
+
         // Suppress IsStuck for bots in the handoff grace period. BotState's unstuck logic
         // fires every tick and will override our EndSession cleanup otherwise.
         if (_handoffGraceExpiry.Count > 0)
@@ -1774,9 +1852,9 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 continue;
             }
 
-            if (ShouldHandOff(moveTo.Player, allPlayersThisTick))
+            if (TryGetHandOffEnemy(moveTo.Player, allPlayersThisTick, out var moveToEnemy))
             {
-                EndRetakeMoveTo(i);
+                EndRetakeMoveTo(i, moveToEnemy);
                 continue;
             }
 
@@ -1812,11 +1890,16 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
     }
 
-    private void EndRetakeMoveTo(int index)
+    private void EndRetakeMoveTo(int index, CCSPlayerController? knownEnemy = null)
     {
         var moveTo = _retakeMoveTos[index];
         _retakeMoveTos.RemoveAt(index);
+        if (knownEnemy != null)
+        {
+            PrimeBotForKnownEnemy(moveTo.Player, knownEnemy, markVisible: true);
+        }
         ReleaseBotToNativeAi(moveTo.Player);
+        BotController.SetBotIdle(moveTo.Player.Slot);
     }
 
     private bool StartRetakeReplayFromMoveTo(RetakeMoveToSession moveTo)
@@ -1826,7 +1909,8 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             moveTo.Player, moveTo.Round, moveTo.ReplayPlayer, moveTo.Frames,
             grenades: BuildSessionGrenades(moveTo.ReplayPlayer, ReplaySessionKind.Retake),
             startTime: startTime,
-            kind: ReplaySessionKind.Retake);
+            kind: ReplaySessionKind.Retake,
+            nativeReplayStartTick: NativeReplayStartTick(moveTo.ReplayPlayer, ReplaySessionKind.Retake));
 
         if (!TryStartNativeReplay(session))
         {
@@ -1965,6 +2049,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     {
         var session = _sessions[sessionIndex];
         _sessions.RemoveAt(sessionIndex);
+        Logger.LogInformation(
+            "[ProReplay] {Kind} replay ended player={PlayerName} slot={Slot} reason={Reason} cursor={Cursor}/{Total}",
+            session.Kind,
+            session.Player.PlayerName,
+            session.Player.Slot,
+            reason,
+            session.NativeReplayActive ? BotController.GetReplayCursor(session.NativeReplaySlot) : -1,
+            session.NativeReplayTickCount);
         _enemyWatchStates.Remove(PlayerKey(session.Player));
         StopNativeReplay(session);
         ReleaseBotToNativeAi(session.Player);
@@ -1972,6 +2064,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
     private void ReleaseBotToNativeAi(CCSPlayerController player)
     {
+        ReleaseNativeControllerState(player.Slot);
         if (player.IsValid && player.PawnIsAlive)
         {
             var pawn = player.PlayerPawn.Value;
@@ -2023,6 +2116,20 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             _handoffGraceExpiry[player] = Server.CurrentTime + 3.0f;
         }
 
+    }
+
+    private void ReleaseNativeControllerState(int slot)
+    {
+        if (slot < 0 || slot >= 64)
+        {
+            return;
+        }
+
+        BotController.Unlock(slot, LockKind.All);
+        BotController.Unlock(slot, LockKind.Aim);
+        BotController.Unlock(slot, LockKind.Jump);
+        ClearNativeWeaponState(slot);
+        BotController.SetBotIdle(slot);
     }
 
     private const int FL_DUCKING = 1 << 2;
@@ -2321,8 +2428,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 }
 
                 var grenades = BuildSessionGrenades(assignment.Player, ReplaySessionKind.Opening);
-                var nativePreloaded = _nativeReplayAvailable
-                    && PreloadNativeReplayBuffer(player, assignment.Player, ReplaySessionKind.Opening);
+                var nativePreloaded = false;
                 _preparedOpeningSessions[PlayerKey(player)] = new PreparedOpeningSession(
                     assignment.Round,
                     assignment.Player,
@@ -2358,7 +2464,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
     }
 
-    private bool PreloadNativeReplayBuffer(CCSPlayerController player, ReplayPlayer replayPlayer, ReplaySessionKind kind)
+    private bool PreloadNativeReplayBuffer(CCSPlayerController player, ReplayPlayer replayPlayer, ReplaySessionKind kind, int? startTickOverride = null)
     {
         var slot = player.Slot;
         if (slot < 0 || slot >= 64)
@@ -2373,9 +2479,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return false;
         }
 
-        var startTick = kind == ReplaySessionKind.Retake
-            ? Math.Max(0, replayPlayer.RetakeStartTickIndex)
-            : 0;
+        var startTick = startTickOverride ?? NativeReplayStartTick(replayPlayer, kind);
         var replayKey = ReplayKeyForKind(replayPlayer, kind);
         var loadKey = NativeReplayLoadKey(replayPath, startTick, replayKey, _config.SuppressReplayAttackInput);
         if (_nativeReplayPreloadKeys.TryGetValue(slot, out var existing) && existing == loadKey)
@@ -2409,22 +2513,18 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return false;
         }
 
-        if (!session.ReplayWeaponsPreloaded)
+        if (session.Kind == ReplaySessionKind.Retake && !session.ReplayWeaponsPreloaded)
         {
-            var allowInventoryMutation = session.Kind == ReplaySessionKind.Retake || !_freezeEnded;
-            if (allowInventoryMutation)
-            {
-                session.ReplayWeaponsPreloaded = PreloadReplayWeapons(
-                    session.Player,
-                    session.ReplayPlayer,
-                    session.Frames,
-                    session.Kind,
-                    allowInventoryMutation: true);
-            }
+            session.ReplayWeaponsPreloaded = PreloadReplayWeapons(
+                session.Player,
+                session.ReplayPlayer,
+                session.Frames,
+                session.Kind,
+                allowInventoryMutation: true);
         }
 
         if (!session.NativeReplayPreloaded
-            && !PreloadNativeReplayBuffer(session.Player, session.ReplayPlayer, session.Kind))
+            && !PreloadNativeReplayBuffer(session.Player, session.ReplayPlayer, session.Kind, session.NativeReplayStartTick))
         {
             return false;
         }
@@ -2441,8 +2541,36 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         session.NativeReplayLastCursor = -1;
         session.NativeReplayStallTicks = 0;
         session.NativeReplayDiagnosticLogged = false;
-        ApplyReplayWeaponPreset(session, ChooseStartWeaponDef(session), allowSlotReplacement: false, force: true);
+        ApplyOpeningReplayInitialPlacement(session);
+        if (session.Kind == ReplaySessionKind.Retake)
+        {
+            ApplyReplayWeaponPreset(session, ChooseStartWeaponDef(session), allowSlotReplacement: false, force: true);
+        }
         return true;
+    }
+
+    private void ApplyOpeningReplayInitialPlacement(ReplaySession session)
+    {
+        if (session.Kind != ReplaySessionKind.Opening || _freezeEnded)
+        {
+            return;
+        }
+
+        var pawn = session.Player.PlayerPawn.Value;
+        if (pawn == null || !pawn.IsValid || !BotController.TryGetReplayTick(session.NativeReplaySlot, out var tick))
+        {
+            return;
+        }
+
+        var snapshot = tick.Pre;
+        pawn.Teleport(
+            new Vector(snapshot.OriginX, snapshot.OriginY, snapshot.OriginZ),
+            new QAngle(0f, snapshot.Yaw, 0f),
+            new Vector(snapshot.VelX, snapshot.VelY, snapshot.VelZ));
+        pawn.EyeAngles.X = Math.Clamp(snapshot.Pitch, -89f, 89f);
+        pawn.EyeAngles.Y = snapshot.Yaw;
+        pawn.EyeAngles.Z = 0f;
+        Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_angEyeAngles");
     }
 
     private string ResolveReplayPath(ReplaySession session)
@@ -2532,7 +2660,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 normalized,
                 forceSwitch: false,
                 allowGive: allowInventoryMutation,
-                replaceConflictingSlot: false);
+                replaceConflictingSlot: kind == ReplaySessionKind.Opening && IsSlotReplaceableWeaponDef(normalized));
         }
 
         return true;
@@ -2632,17 +2760,17 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             }
         }
 
-        if (allowSlotReplacement && IsSlotReplaceableWeaponDef(normalized))
+        if (allowSlotReplacement)
         {
             EnsureReplayWeaponForSlot(
                 slot,
                 normalized,
                 forceSwitch: false,
                 allowGive: true,
-                replaceConflictingSlot: false);
+                replaceConflictingSlot: IsSlotReplaceableWeaponDef(normalized));
         }
 
-        var switched = BotController.SwitchBotWeapon(slot, normalized);
+        var switched = BotController.SwitchBotWeapon(slot, NativeWeaponDefIndex(normalized));
         if (switched || IsReplayWeaponActive(session.Player, normalized))
         {
             _lastReplayWeaponDef[slot] = normalized;
@@ -2706,14 +2834,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                 replaceConflictingSlot,
                 out _))
         {
-            _lastEnsuredWeaponDef[slot] = normalized;
+            _lastEnsuredWeaponDef.Remove(slot);
             return;
         }
 
         _lastEnsuredWeaponDef[slot] = normalized;
         if (forceSwitch)
         {
-            BotController.SwitchBotWeapon(slot, normalized);
+            BotController.SwitchBotWeapon(slot, NativeWeaponDefIndex(normalized));
         }
     }
 
@@ -2788,7 +2916,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return false;
         }
 
-        _ = replaceConflictingSlot;
+        if (replaceConflictingSlot)
+        {
+            RemoveConflictingReplaySlotWeapons(player, pawn, slot, className);
+            if (HasReplayWeapon(pawn, className))
+            {
+                return true;
+            }
+        }
 
         try
         {
@@ -2801,6 +2936,145 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         return HasReplayWeapon(pawn, className) || slot == ReplayWeaponSlot.Utility;
+    }
+
+    private static void RemoveConflictingReplaySlotWeapons(
+        CCSPlayerController player,
+        CCSPlayerPawn pawn,
+        ReplayWeaponSlot slot,
+        string expectedClassName)
+    {
+        if (slot is not (ReplayWeaponSlot.Primary or ReplayWeaponSlot.Secondary) || pawn.WeaponServices == null)
+        {
+            return;
+        }
+
+        var toRemove = pawn.WeaponServices.MyWeapons
+            .Select(handle => handle.Value)
+            .Where(weapon => weapon != null && weapon.IsValid)
+            .Select(weapon => weapon!)
+            .Where(weapon => !WeaponClassMatches(weapon.DesignerName, expectedClassName))
+            .Where(weapon => GetReplayWeaponSlot(weapon.DesignerName) == slot)
+            .ToList();
+
+        foreach (var weapon in toRemove)
+        {
+            RemovePlayerWeaponAndCleanupDrop(player, weapon);
+        }
+    }
+
+    private static void RemoveInventoryItemsAndCleanupDrops(CCSPlayerController player, string itemName, int count)
+    {
+        if (count <= 0)
+        {
+            return;
+        }
+
+        var pawn = player.PlayerPawn.Value;
+        if (pawn?.WeaponServices == null)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                player.RemoveItemByDesignerName(itemName);
+            }
+            return;
+        }
+
+        var toRemove = pawn.WeaponServices.MyWeapons
+            .Select(handle => handle.Value)
+            .Where(weapon => weapon != null && weapon.IsValid)
+            .Select(weapon => weapon!)
+            .Where(weapon => NormalizeLoadoutItem(weapon.DesignerName).Equals(itemName, StringComparison.OrdinalIgnoreCase))
+            .Take(count)
+            .ToList();
+
+        foreach (var weapon in toRemove)
+        {
+            RemovePlayerWeaponAndCleanupDrop(player, weapon);
+        }
+
+        for (var i = toRemove.Count; i < count; i++)
+        {
+            player.RemoveItemByDesignerName(itemName);
+        }
+    }
+
+    private static void RemovePlayerWeaponAndCleanupDrop(CCSPlayerController player, CBasePlayerWeapon weapon)
+    {
+        if (weapon == null || !weapon.IsValid)
+        {
+            return;
+        }
+
+        var weaponName = weapon.DesignerName;
+        if (string.IsNullOrWhiteSpace(weaponName))
+        {
+            return;
+        }
+
+        var weaponRaw = weapon.EntityHandle.Raw;
+        var origin = SnapshotOrigin(weapon) ?? SnapshotPlayerOrigin(player);
+        player.RemoveItemByDesignerName(weaponName);
+        ScheduleDroppedWeaponCleanup(weaponName, weaponRaw, origin);
+    }
+
+    private static Vector? SnapshotOrigin(CBaseEntity entity)
+    {
+        var origin = entity.AbsOrigin;
+        return origin == null ? null : new Vector(origin.X, origin.Y, origin.Z);
+    }
+
+    private static Vector? SnapshotPlayerOrigin(CCSPlayerController player)
+    {
+        var origin = player.PlayerPawn.Value?.AbsOrigin;
+        return origin == null ? null : new Vector(origin.X, origin.Y, origin.Z);
+    }
+
+    private static void ScheduleDroppedWeaponCleanup(string weaponName, uint weaponRaw, Vector? origin)
+    {
+        Server.NextFrame(() =>
+        {
+            CleanupDroppedWeapon(weaponName, weaponRaw, origin);
+            Server.NextFrame(() => CleanupDroppedWeapon(weaponName, weaponRaw, origin));
+        });
+    }
+
+    private static void CleanupDroppedWeapon(string weaponName, uint weaponRaw, Vector? origin)
+    {
+        var killedByHandle = false;
+        foreach (var weapon in Utilities.FindAllEntitiesByDesignerName<CBasePlayerWeapon>(weaponName))
+        {
+            if (weapon == null || !weapon.IsValid || weapon.OwnerEntity.IsValid)
+            {
+                continue;
+            }
+
+            if (weapon.EntityHandle.Raw == weaponRaw)
+            {
+                weapon.AcceptInput("Kill");
+                killedByHandle = true;
+            }
+        }
+
+        if (killedByHandle || origin == null)
+        {
+            return;
+        }
+
+        const float cleanupRadius = 96.0f;
+        var cleanupRadiusSq = cleanupRadius * cleanupRadius;
+        foreach (var weapon in Utilities.FindAllEntitiesByDesignerName<CBasePlayerWeapon>(weaponName))
+        {
+            if (weapon == null || !weapon.IsValid || weapon.OwnerEntity.IsValid || weapon.AbsOrigin == null)
+            {
+                continue;
+            }
+
+            if (DistanceSquared(weapon.AbsOrigin, origin) <= cleanupRadiusSq)
+            {
+                weapon.AcceptInput("Kill");
+            }
+        }
     }
 
     private static bool HasReplayWeapon(CCSPlayerPawn pawn, string className)
@@ -2966,6 +3240,13 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return weaponDefIndex;
     }
 
+    private static int NativeWeaponDefIndex(int weaponDefIndex)
+    {
+        return NormalizeWeaponDefIndex(weaponDefIndex) == 42
+            ? BotController.KnifeDef
+            : weaponDefIndex;
+    }
+
     private static bool TryGetWeaponClassByDefIndex(int weaponDefIndex, out string className)
     {
         className = NormalizeWeaponDefIndex(weaponDefIndex) switch
@@ -3026,7 +3307,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         BotController.StopReplay(session.NativeReplaySlot);
-        ClearNativeWeaponState(session.NativeReplaySlot);
+        ReleaseNativeControllerState(session.NativeReplaySlot);
         session.NativeReplayActive = false;
         session.NativeReplaySlot = -1;
     }
@@ -3076,6 +3357,15 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private void ApplyReplaySideEffects(ReplaySession session)
     {
         var allowReplayAttack = false;
+        if (session.NativeReplayActive)
+        {
+            var nativeCursor = BotController.GetReplayCursor(session.NativeReplaySlot);
+            if (nativeCursor >= 0)
+            {
+                ApplyFreezeInventorySnapshots(session, session.NativeReplayStartTick + nativeCursor);
+            }
+        }
+
         if (session.NativeReplayActive && BotController.TryGetReplayTick(session.NativeReplaySlot, out var tick))
         {
             var weaponDefIndex = NormalizeWeaponDefIndex(tick.WeaponDefIndex);
@@ -3090,6 +3380,116 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         ApplyReplayControlSideEffects(session.Player, session.StartTime, allowReplayAttack);
+    }
+
+    private void ApplyFreezeInventorySnapshots(ReplaySession session, int replayTickIndex)
+    {
+        if (_freezeEnded
+            || session.Kind != ReplaySessionKind.Opening
+            || replayTickIndex < 0
+            || session.ReplayPlayer.FreezeInventorySnapshots.Count == 0)
+        {
+            return;
+        }
+
+        while (session.NextFreezeInventorySnapshotIndex < session.ReplayPlayer.FreezeInventorySnapshots.Count)
+        {
+            var snapshot = session.ReplayPlayer.FreezeInventorySnapshots[session.NextFreezeInventorySnapshotIndex];
+            if (FreezeSnapshotReplayTickIndex(session.ReplayPlayer, snapshot) > replayTickIndex)
+            {
+                break;
+            }
+
+            ApplyFreezeInventorySnapshot(session.Player, snapshot);
+            session.NextFreezeInventorySnapshotIndex++;
+        }
+    }
+
+    private static int FreezeSnapshotReplayTickIndex(ReplayPlayer replayPlayer, FreezeInventorySnapshot snapshot)
+        => Math.Max(0, replayPlayer.FreezeEndTickIndex + snapshot.RelativeTick);
+
+    private static void ApplyFreezeInventorySnapshot(CCSPlayerController player, FreezeInventorySnapshot snapshot)
+    {
+        if (!player.IsValid || !player.PawnIsAlive)
+        {
+            return;
+        }
+
+        if (snapshot.Inventory.Count > 0 || snapshot.InventoryDefIndexes.Count > 0)
+        {
+            SyncInventorySnapshotItems(player, BuildSnapshotItems(snapshot.Inventory, snapshot.InventoryDefIndexes));
+            return;
+        }
+
+        GivePlayerInventoryItems(player, BuildSnapshotItems(snapshot.Added, snapshot.AddedDefIndexes));
+    }
+
+    private static Dictionary<string, int> BuildSnapshotItems(IEnumerable<string> itemNames, IEnumerable<int> defIndexes)
+    {
+        var items = CountItems(itemNames
+            .Select(NormalizeLoadoutItem)
+            .Where(IsReplayLoadoutItem));
+        MergeReplayLoadoutDefs(items, defIndexes);
+        return items;
+    }
+
+    private static void SyncInventorySnapshotItems(CCSPlayerController player, Dictionary<string, int> targetItems)
+    {
+        var currentItems = CountItems(GetCurrentInventory(player)
+            .Select(NormalizeLoadoutItem)
+            .Where(IsReplayLoadoutItem));
+
+        RemoveSurplusInventoryItems(player, currentItems, targetItems);
+        GiveMissingInventorySnapshotItems(player, targetItems);
+    }
+
+    private static void GiveMissingInventorySnapshotItems(CCSPlayerController player, Dictionary<string, int> targetItems)
+    {
+        var currentItems = CountItems(GetCurrentInventory(player)
+            .Select(NormalizeLoadoutItem)
+            .Where(IsReplayLoadoutItem));
+        var toGive = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (itemName, targetCount) in targetItems)
+        {
+            var missing = targetCount - currentItems.GetValueOrDefault(itemName);
+            if (missing > 0)
+            {
+                toGive[itemName] = missing;
+            }
+        }
+
+        GivePlayerInventoryItems(player, toGive);
+    }
+
+    private static void RemoveSurplusInventoryItems(
+        CCSPlayerController player,
+        Dictionary<string, int> currentItems,
+        Dictionary<string, int> targetItems)
+    {
+        foreach (var (itemName, ownedCount) in currentItems)
+        {
+            var surplusCount = Math.Max(0, ownedCount - targetItems.GetValueOrDefault(itemName));
+            if (surplusCount > 0)
+            {
+                RemoveInventoryItemsAndCleanupDrops(player, itemName, surplusCount);
+            }
+        }
+    }
+
+    private static void GivePlayerInventoryItems(CCSPlayerController player, Dictionary<string, int> items)
+    {
+        foreach (var (itemName, count) in items)
+        {
+            if (!IsReplayLoadoutItem(itemName))
+            {
+                continue;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                TryGiveNamedItem(player, itemName);
+            }
+        }
     }
 
     private void ApplyReplayControlSideEffects(CCSPlayerController player, float startTime, bool allowReplayAttack)
@@ -3242,6 +3642,10 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
         if (HasReplayWeapon(pawn, targetItem))
         {
+            if (allowReplacement)
+            {
+                RemoveConflictingReplaySlotWeapons(player, pawn, slot, targetItem);
+            }
             return false;
         }
 
@@ -3257,29 +3661,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return false;
         }
 
-        var fallbackItem = currentSlotWeapons
-            .Select(weapon => NormalizeLoadoutItem(weapon.DesignerName))
-            .FirstOrDefault(itemName => !WeaponClassMatches(itemName, targetItem));
-        var weaponToDrop = currentSlotWeapons
-            .FirstOrDefault(weapon => !WeaponClassMatches(NormalizeLoadoutItem(weapon.DesignerName), targetItem));
-        if (fallbackItem == null || weaponToDrop == null)
-        {
-            return false;
-        }
-
-        if (!TrySelectWeapon(player, pawn, weaponToDrop))
-        {
-            return false;
-        }
-
-        try
-        {
-            player.DropActiveWeapon();
-        }
-        catch
-        {
-            return false;
-        }
+        RemoveConflictingReplaySlotWeapons(player, pawn, slot, targetItem);
 
         if (player.Slot >= 0)
         {
@@ -3287,7 +3669,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             _lastReplayWeaponDef.Remove(player.Slot);
         }
 
-        Server.NextFrame(() => CompleteWeaponSlotReplacement(player, targetItem, fallbackItem, slot));
+        Server.NextFrame(() => CompleteWeaponSlotReplacement(player, targetItem, slot));
         return true;
     }
 
@@ -3301,7 +3683,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     private void CompleteWeaponSlotReplacement(
         CCSPlayerController player,
         string targetItem,
-        string fallbackItem,
         ReplayWeaponSlot slot)
     {
         if (!player.IsValid)
@@ -3326,32 +3707,6 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         TryGiveNamedItem(player, targetItem);
-        Server.NextFrame(() => RestoreFallbackWeaponIfNeeded(player, targetItem, fallbackItem, slot));
-    }
-
-    private static void RestoreFallbackWeaponIfNeeded(
-        CCSPlayerController player,
-        string targetItem,
-        string fallbackItem,
-        ReplayWeaponSlot slot)
-    {
-        if (!player.IsValid)
-        {
-            return;
-        }
-
-        var pawn = player.PlayerPawn.Value;
-        if (pawn == null || !pawn.IsValid || pawn.WeaponServices == null)
-        {
-            return;
-        }
-
-        if (HasReplayWeapon(pawn, targetItem) || GetWeaponsInReplaySlot(pawn, slot).Any())
-        {
-            return;
-        }
-
-        TryGiveNamedItem(player, fallbackItem);
     }
 
     private static bool TryGiveNamedItem(CCSPlayerController player, string itemName)
@@ -3374,7 +3729,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             var defIndex = WeaponDefIndex(weapon.DesignerName);
             if (defIndex >= 0)
             {
-                BotController.SwitchBotWeapon(player.Slot, defIndex);
+                BotController.SwitchBotWeapon(player.Slot, NativeWeaponDefIndex(defIndex));
             }
         }
 
@@ -3811,7 +4166,14 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
     }
 
     private bool ShouldHandOff(CCSPlayerController player, IEnumerable<CCSPlayerController> allPlayers)
+        => TryGetHandOffEnemy(player, allPlayers, out _);
+
+    private bool TryGetHandOffEnemy(
+        CCSPlayerController player,
+        IEnumerable<CCSPlayerController> allPlayers,
+        out CCSPlayerController? contactEnemy)
     {
+        contactEnemy = null;
         if (!_config.StopOnEnemyContact)
         {
             return false;
@@ -3824,7 +4186,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         var players = allPlayers as IReadOnlyList<CCSPlayerController> ?? allPlayers.ToArray();
-        if (RayTraceSeesAnyEnemy(player, pawn, players))
+        if (TryGetRayTraceVisibleEnemy(player, pawn, players, out contactEnemy))
         {
             return true;
         }
@@ -3875,6 +4237,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             var mask = enemyPawn.EntitySpottedState.SpottedByMask;
             if (mask.Length > slotIndex && (mask[slotIndex] & slotBit) != 0)
             {
+                contactEnemy = enemy;
                 return true;
             }
         }
@@ -3996,13 +4359,22 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         CCSPlayerController player,
         CCSPlayerPawn pawn,
         IEnumerable<CCSPlayerController> allPlayers)
+        => TryGetRayTraceVisibleEnemy(player, pawn, allPlayers, out _);
+
+    private bool TryGetRayTraceVisibleEnemy(
+        CCSPlayerController player,
+        CCSPlayerPawn pawn,
+        IEnumerable<CCSPlayerController> allPlayers,
+        out CCSPlayerController? visibleEnemy)
     {
+        visibleEnemy = null;
         var rayTrace = TryGetRayTrace();
         if (rayTrace == null || !TryGetEyePosition(pawn, out var eye))
         {
             return false;
         }
 
+        var bestDistance = float.MaxValue;
         foreach (var enemy in allPlayers)
         {
             if (!IsLiveEnemy(player, enemy))
@@ -4018,11 +4390,18 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
 
             if (RayTraceSeesEnemy(rayTrace, pawn, eye, enemyPawn))
             {
-                return true;
+                var distance = pawn.AbsOrigin == null
+                    ? 0f
+                    : DistanceSquared(pawn.AbsOrigin, enemyPawn.AbsOrigin);
+                if (visibleEnemy == null || distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    visibleEnemy = enemy;
+                }
             }
         }
 
-        return false;
+        return visibleEnemy != null;
     }
 
     private static bool RayTraceSeesEnemy(
@@ -4219,9 +4598,20 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
                     {
                         return;
                     }
+                    if (dataset == null)
+                    {
+                        Logger.LogWarning("[ProReplay] dataset load returned null path={Path}", path);
+                        return;
+                    }
 
                     _dataset = dataset;
                     BuildRoundIndexes();
+                    Logger.LogInformation(
+                        "[ProReplay] dataset loaded map={MapName} rounds={RoundCount} records={RecordCount} path={Path}",
+                        _dataset.MapName,
+                        _dataset.Rounds.Count,
+                        CollectReplayBundlePaths(_dataset).Count,
+                        path);
                     StartReplayBundlePrewarm();
                     if (!_freezeEnded && !_roundPrepared && _roundLoadoutBudgets.Count > 0)
                     {
@@ -4733,7 +5123,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
             return;
         }
 
-        if (_nativeReplayAvailable && BotController.SwitchBotWeapon(player.Slot, defIndex))
+        if (_nativeReplayAvailable && BotController.SwitchBotWeapon(player.Slot, NativeWeaponDefIndex(defIndex)))
         {
             return;
         }
@@ -4793,7 +5183,7 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         }
 
         var defIndex = WeaponDefIndex(target.DesignerName);
-        if (_nativeReplayAvailable && BotController.SwitchBotWeapon(player.Slot, defIndex))
+        if (_nativeReplayAvailable && BotController.SwitchBotWeapon(player.Slot, NativeWeaponDefIndex(defIndex)))
         {
             return;
         }
@@ -5029,6 +5419,188 @@ public sealed class ProOpeningReplayPlugin : BasePlugin
         return player.UserId ?? (int)player.Index;
     }
 
+    private static CCSGameRules? GameRules()
+    {
+        return Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules")
+            .FirstOrDefault()?.GameRules;
+    }
+
+    private static bool IsWarmupPeriod()
+    {
+        return GameRules()?.WarmupPeriod == true;
+    }
+
+    private static bool IsFreezePeriod()
+    {
+        return GameRules()?.FreezePeriod == true;
+    }
+
+    private int CurrentLiveFreezeTicks(ReplayPlayer replayPlayer)
+    {
+        var liveFreezeSeconds = CurrentLiveFreezeSeconds(ReplayFreezeSeconds(replayPlayer));
+        return Math.Clamp((int)MathF.Round(liveFreezeSeconds * ReplayTickRate()), 0, replayPlayer.FreezeEndTickIndex);
+    }
+
+    private float CurrentLiveFreezeSeconds(float fallback)
+    {
+        var convarFreezeSeconds = ConVarNumber("mp_freezetime", 0f);
+        var gameRulesFreezeSeconds = CurrentGameRulesFreezeSeconds(Math.Max(fallback, convarFreezeSeconds));
+        if (gameRulesFreezeSeconds > 0.001f)
+        {
+            return gameRulesFreezeSeconds;
+        }
+
+        var liveFreezeSeconds = convarFreezeSeconds;
+        if (liveFreezeSeconds <= 0.001f)
+        {
+            liveFreezeSeconds = fallback;
+        }
+
+        return Math.Max(0f, liveFreezeSeconds);
+    }
+
+    private static float CurrentLiveFreezeEndTime()
+    {
+        var gameRules = GameRules();
+        if (gameRules == null)
+        {
+            return -1f;
+        }
+
+        const float maxReasonableRemainingSeconds = 90f;
+        var now = Server.CurrentTime;
+
+        try
+        {
+            var roundStartTime = gameRules.RoundStartTime;
+            var remaining = roundStartTime - now;
+            if (remaining > 0.001f && remaining <= maxReasonableRemainingSeconds)
+            {
+                return roundStartTime;
+            }
+        }
+        catch
+        {
+            // Fall through to the phase-remaining timestamp.
+        }
+
+        try
+        {
+            var remaining = gameRules.TimeUntilNextPhaseStarts;
+            if (remaining > 0.001f && remaining <= maxReasonableRemainingSeconds)
+            {
+                return now + remaining;
+            }
+        }
+        catch
+        {
+            return -1f;
+        }
+
+        return -1f;
+    }
+
+    private float CurrentGameRulesFreezeSeconds(float referenceFreezeSeconds)
+    {
+        var gameRules = GameRules();
+        if (gameRules == null)
+        {
+            return 0f;
+        }
+
+        const float maxReasonableFreezeSeconds = 90f;
+        var freezeTime = 0;
+        try
+        {
+            freezeTime = gameRules.FreezeTime;
+            if (freezeTime > 0)
+            {
+                referenceFreezeSeconds = Math.Max(referenceFreezeSeconds, freezeTime);
+            }
+        }
+        catch
+        {
+            // Fall through to timestamp/remaining-time checks.
+        }
+
+        var freezeStart = _freezePeriodStartTime;
+        if (freezeStart >= 0f)
+        {
+            var now = Server.CurrentTime;
+            var elapsed = Math.Max(0f, now - freezeStart);
+
+            try
+            {
+                var roundStartTime = gameRules.RoundStartTime;
+                var total = roundStartTime - freezeStart;
+                if (total > 0.001f && total <= maxReasonableFreezeSeconds)
+                {
+                    return total;
+                }
+            }
+            catch
+            {
+                // Older CSS builds may expose fewer game-rule fields.
+            }
+
+            try
+            {
+                var remaining = gameRules.TimeUntilNextPhaseStarts;
+                var total = elapsed + remaining;
+                var maxExpectedRemaining = Math.Max(10f, referenceFreezeSeconds + 10f);
+                if (remaining > 0.001f
+                    && remaining <= maxExpectedRemaining
+                    && total > 0.001f
+                    && total <= maxReasonableFreezeSeconds)
+                {
+                    return total;
+                }
+            }
+            catch
+            {
+                // Fall through to FreezeTime/convar.
+            }
+        }
+
+        if (freezeTime > 0 && freezeTime <= maxReasonableFreezeSeconds)
+        {
+            return freezeTime;
+        }
+
+        return 0f;
+    }
+
+    private static float ConVarNumber(string name, float fallback)
+    {
+        var convar = ConVar.Find(name);
+        if (convar == null)
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return convar.GetPrimitiveValue<int>();
+        }
+        catch (InvalidOperationException)
+        {
+        }
+
+        try
+        {
+            return convar.GetPrimitiveValue<float>();
+        }
+        catch (InvalidOperationException)
+        {
+            return fallback;
+        }
+    }
+
+    private float ReplayFreezeSeconds(ReplayPlayer replayPlayer)
+        => replayPlayer.FreezeEndTime > 0.001f
+            ? replayPlayer.FreezeEndTime
+            : replayPlayer.FreezeEndTickIndex / (float)ReplayTickRate();
+
     private static void Reply(CCSPlayerController? player, CommandInfo commandInfo, string message)
     {
         if (player is { IsValid: true })
@@ -5065,7 +5637,7 @@ public sealed class ReplayConfig
     public string MapName { get; set; } = "";
     [Obsolete("Use DatasetPathTemplate.")]
     public string DatasetPath { get; set; } = "";
-    public bool ApplyLoadouts { get; set; } = true;
+    public bool ApplyLoadouts { get; set; } = false;
     public bool SuppressNativeBotBuying { get; set; } = true;
     public bool PreserveUsefulEquipment { get; set; } = true;
     public bool TransferSavedUtility { get; set; } = true;
@@ -5088,14 +5660,11 @@ public sealed class ReplayConfig
     /// hearing an enemy is not contact, and the engine's spotted-mask check still fires the moment LOS is established.
     /// </summary>
     public bool StopOnAudibleEnemyNoise { get; set; } = false;
-    /// <summary>
-    /// When true, bots emit radio-style chat messages at key moments (opening target, retake callout).
-    /// </summary>
-    public bool RadioCallouts { get; set; } = true;
     public float SpawnMatchTolerance { get; set; } = 24f;
     public float HumanSpawnBlockRadius { get; set; } = 72f;
-    public float MatchSelectionDelay { get; set; } = 0.85f;
-    public float LoadoutApplyDelay { get; set; } = 1.0f;
+    public float MatchSelectionDelay { get; set; } = 0f;
+    public float LoadoutApplyDelay { get; set; } = 0f;
+    public bool AlignOpeningFreezeEnd { get; set; } = true;
     public float HandoffDistance { get; set; } = 1800f;
     public float HandoffFovDegrees { get; set; } = 90f;
     public float FootstepHandoffDistance { get; set; } = 1150f;
@@ -5151,6 +5720,7 @@ public sealed class ReplayConfig
 public sealed class ReplayDataset
 {
     public string MapName { get; set; } = "de_dust2";
+    public int TickRate { get; set; } = 64;
     public List<ReplayRound> Rounds { get; set; } = [];
     [JsonIgnore]
     public string BaseDirectory { get; set; } = string.Empty;
@@ -5210,11 +5780,14 @@ public sealed class ReplayPlayer
     public bool HasDefuser { get; set; }
     public List<string> Inventory { get; set; } = [];
     public List<int> InventoryDefIndexes { get; set; } = [];
+    public List<FreezeInventorySnapshot> FreezeInventorySnapshots { get; set; } = [];
     public string RecPath { get; set; } = string.Empty;
     public string RecKey { get; set; } = string.Empty;
     public string RetakeRecPath { get; set; } = string.Empty;
     public string RetakeRecKey { get; set; } = string.Empty;
     public float Duration { get; set; }
+    public int FreezeEndTickIndex { get; set; }
+    public float FreezeEndTime { get; set; }
     [JsonPropertyName("retakeDuration")]
     public float RetakeDuration { get; set; }
     [JsonPropertyName("retakeStartTime")]
@@ -5230,6 +5803,19 @@ public sealed class ReplayPlayer
     public ReplayFrame? RetakeStartFrame { get; set; }
     public ReplayFrame? RetakeEndFrame { get; set; }
     public List<ReplayGrenade> Grenades { get; set; } = [];
+}
+
+public sealed class FreezeInventorySnapshot
+{
+    public int Tick { get; set; }
+    public int RelativeTick { get; set; }
+    public float Time { get; set; }
+    public List<string> Inventory { get; set; } = [];
+    public List<int> InventoryDefIndexes { get; set; } = [];
+    public List<string> Added { get; set; } = [];
+    public List<string> Removed { get; set; } = [];
+    public List<int> AddedDefIndexes { get; set; } = [];
+    public List<int> RemovedDefIndexes { get; set; } = [];
 }
 
 public sealed class ReplayFrame
@@ -5856,7 +6442,8 @@ public sealed class ReplaySession
         List<ReplayGrenade> grenades,
         float startTime,
         ReplaySessionKind kind = ReplaySessionKind.Opening,
-        float frameTimeOffset = 0f)
+        float frameTimeOffset = 0f,
+        int nativeReplayStartTick = 0)
     {
         Player = player;
         // Snapshot the player name eagerly. After a player disconnects (or quickly switches teams) the
@@ -5870,6 +6457,7 @@ public sealed class ReplaySession
         StartTime = startTime;
         Kind = kind;
         FrameTimeOffset = frameTimeOffset;
+        NativeReplayStartTick = Math.Max(0, nativeReplayStartTick);
         LastFrameTime = frames.Count == 0 ? 0f : frames[^1].Time - frameTimeOffset;
     }
 
@@ -5882,11 +6470,11 @@ public sealed class ReplaySession
     public float StartTime { get; }
     public float LastFrameTime { get; }
     public ReplaySessionKind Kind { get; }
-    // For retake sessions, frames still carry their original Time field (relative to round freeze-end).
-    // FrameTimeOffset is the Time value of the plant tick; we subtract it so elapsed=0 lines up with the
-    // first post-plant frame. Opening sessions leave it 0.
+    // Frames can start from a non-zero native tick; subtract this so elapsed=0 matches the sliced replay.
     public float FrameTimeOffset { get; }
+    public int NativeReplayStartTick { get; }
     public int NextGrenadeIndex { get; set; }
+    public int NextFreezeInventorySnapshotIndex { get; set; }
     public bool NativeReplayActive { get; set; }
     public bool NativeReplayPreloaded { get; set; }
     public bool ReplayWeaponsPreloaded { get; set; }
