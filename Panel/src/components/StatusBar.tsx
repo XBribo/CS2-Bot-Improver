@@ -54,7 +54,9 @@ export default function StatusBar() {
               {filesStatus === "green"
                 ? t("st.allPresent")
                 : filesStatus === "red"
-                ? t("st.missing", { n: files?.missing.length ?? 0 })
+                ? files?.misplaced
+                  ? t("st.wrongLocation")
+                  : t("st.missing", { n: files?.missing.length ?? 0 })
                 : filesStatus === "off"
                 ? "—"
                 : t("st.checking")}
@@ -83,6 +85,13 @@ export default function StatusBar() {
           </button>
         }
       >
+        {files?.misplaced && (
+          <p className="missing-note selectable">
+            {t("st.wrongLocation")}
+            <br />
+            <code>{files.misplaced}</code>
+          </p>
+        )}
         <ul className="missing-list selectable">
           {files?.missing.map((m) => (
             <li key={m}>{m}</li>

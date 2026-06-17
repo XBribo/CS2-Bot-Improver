@@ -44,6 +44,21 @@
   max-width: 150px;
 }
 
+.missing-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.missing-note code {
+  display: inline-block;
+  margin-top: 4px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
 .missing-list {
   margin: 0;
   padding: 0 0 0 18px;

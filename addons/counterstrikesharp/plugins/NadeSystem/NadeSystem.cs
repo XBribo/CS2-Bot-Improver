@@ -101,7 +101,7 @@ public class RoundCounter
 public class NadeSystemPlugin : BasePlugin
 {
     public override string ModuleName    => "NadeSystem";
-    public override string ModuleVersion => "1.1.4";
+    public override string ModuleVersion => "1.1.5";
     public override string ModuleAuthor  => "ed0ard";
 
     // grenades folder lives inside the plugin directory
@@ -281,6 +281,7 @@ public class NadeSystemPlugin : BasePlugin
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventRoundFreezeEnd>(OnFreezeEnd);
         RegisterEventHandler<EventRoundEnd>(OnRoundEnd);
+        RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterListener<Listeners.OnTick>(OnTick);
         RegisterEventHandler<EventBombBegindefuse>(OnBombBeginDefuse);
         RegisterEventHandler<EventBombBeginplant>(OnBombBeginPlant);
@@ -615,6 +616,13 @@ public class NadeSystemPlugin : BasePlugin
             list = new List<SoundPoint>();
             _soundPoints[idx] = list;
         }
+        // Dedup: skip if within 1u of the last point. Repeated sound made in place
+        if (list.Count > 0)
+        {
+            var last = list[^1];
+            float ddx = ox - last.X, ddy = oy - last.Y, ddz = oz - last.Z;
+            if (ddx * ddx + ddy * ddy + ddz * ddz < 1f) return;
+        }
         list.Add(new SoundPoint(ox, oy, oz));
     }
 
@@ -654,7 +662,8 @@ public class NadeSystemPlugin : BasePlugin
     // Per-tick maintenance of every player's sound trail.
     // Delete sound points that are now farther than SoundInfoRadius from the player.
     // Add a fresh point if the player is currently making footstep sound (speed > threshold).
-    private void UpdateSoundTrails()
+    // Pruning + dead-player cleanup run every call; footstep recording is throttled by the caller to every 4 ticks.
+    private void UpdateSoundTrails(bool recordFootsteps)
     {
         var allPlayers = Utilities.FindAllEntitiesByDesignerName<CCSPlayerController>("cs_player_controller").ToList();
         foreach (var p in allPlayers)
@@ -685,12 +694,15 @@ public class NadeSystemPlugin : BasePlugin
             }
 
             // Footstep sound: horizontal speed above threshold.
-            var vel = pawn.AbsVelocity;
-            if (vel != null)
+            if (recordFootsteps)
             {
-                float speed2 = vel.X * vel.X + vel.Y * vel.Y;
-                if (speed2 > FootstepSpeedThreshold * FootstepSpeedThreshold)
-                    RecordSoundPoint(p, allPlayers);
+                var vel = pawn.AbsVelocity;
+                if (vel != null)
+                {
+                    float speed2 = vel.X * vel.X + vel.Y * vel.Y;
+                    if (speed2 > FootstepSpeedThreshold * FootstepSpeedThreshold)
+                        RecordSoundPoint(p, allPlayers);
+                }
             }
         }
     }
@@ -1279,6 +1291,15 @@ public class NadeSystemPlugin : BasePlugin
     {
         var rules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
         return rules?.GameRules?.FreezePeriod == true;
+    }
+
+    // A dead player makes no more sound, so drop their trail immediately
+    private HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
+    {
+        var player = @event.Userid;
+        if (player != null && player.IsValid)
+            _soundPoints.Remove((uint)player.Index);
+        return HookResult.Continue;
     }
 
     private bool IsPistolRound()
@@ -2045,7 +2066,7 @@ public class NadeSystemPlugin : BasePlugin
     private void OnTick()
     {
         _tick++;
-        UpdateSoundTrails(); // every tick: maintain sound trail for all players
+        UpdateSoundTrails(_tick % 4 == 0);
         if (_tick % 4   == 0) CheckBotZones();
         if (_tick % 256 == 0) PruneCooldowns();
     }

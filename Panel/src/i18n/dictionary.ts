@@ -38,6 +38,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "文件操作失败，请确认 CS2 已关闭后重试。",
     "errcat.config": "无法保存设置。",
     "errcat.internal": "发生意外错误。",
+    "st.wrongLocation": "文件放错文件夹了 — 请移动到 game\\csgo", "cmd.h.botManagement": "机器人管理", "cmd.hint.botName": "机器人名称", "cmd.hint.number": "数量",
   },
 
   tchinese: {
@@ -71,6 +72,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "檔案操作失敗，請確認 CS2 已關閉後再試。",
     "errcat.config": "無法儲存設定。",
     "errcat.internal": "發生未預期的錯誤。",
+    "st.wrongLocation": "檔案放錯資料夾了 — 請移動到 game\\csgo", "cmd.h.botManagement": "電腦人管理", "cmd.hint.botName": "電腦人名稱", "cmd.hint.number": "數量",
   },
 
   japanese: {
@@ -104,6 +106,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "ファイル操作に失敗しました。CS2 を終了してから再試行してください。",
     "errcat.config": "設定を保存できませんでした。",
     "errcat.internal": "予期しないエラーが発生しました。",
+    "st.wrongLocation": "ファイルが間違ったフォルダーにあります — game\\csgo に移動してください", "cmd.h.botManagement": "ボット管理", "cmd.hint.botName": "ボット名", "cmd.hint.number": "数値",
   },
 
   koreana: {
@@ -137,6 +140,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "파일 작업에 실패했습니다. CS2를 종료한 후 다시 시도하세요.",
     "errcat.config": "설정을 저장할 수 없습니다.",
     "errcat.internal": "예기치 않은 오류가 발생했습니다.",
+    "st.wrongLocation": "파일이 잘못된 폴더에 있습니다 — game\\csgo 로 옮기세요", "cmd.h.botManagement": "봇 관리", "cmd.hint.botName": "봇 이름", "cmd.hint.number": "숫자",
   },
 
   french: {
@@ -170,6 +174,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Une opération sur un fichier a échoué. Assurez-vous que CS2 est fermé et réessayez.",
     "errcat.config": "Les paramètres n'ont pas pu être enregistrés.",
     "errcat.internal": "Une erreur inattendue s'est produite.",
+    "st.wrongLocation": "Fichiers dans le mauvais dossier — déplacez-les dans game\\csgo", "cmd.h.botManagement": "GESTION DES BOTS", "cmd.hint.botName": "nom du bot", "cmd.hint.number": "nombre",
   },
 
   german: {
@@ -203,6 +208,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Ein Dateivorgang ist fehlgeschlagen. Stellen Sie sicher, dass CS2 geschlossen ist, und versuchen Sie es erneut.",
     "errcat.config": "Die Einstellungen konnten nicht gespeichert werden.",
     "errcat.internal": "Ein unerwarteter Fehler ist aufgetreten.",
+    "st.wrongLocation": "Dateien im falschen Ordner — verschiebe sie nach game\\csgo", "cmd.h.botManagement": "BOT-VERWALTUNG", "cmd.hint.botName": "Botname", "cmd.hint.number": "Zahl",
   },
 
   spanish: {
@@ -236,6 +242,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Una operación de archivo falló. Asegúrate de que CS2 esté cerrado e inténtalo de nuevo.",
     "errcat.config": "No se pudieron guardar los ajustes.",
     "errcat.internal": "Ocurrió un error inesperado.",
+    "st.wrongLocation": "Archivos en la carpeta incorrecta — muévelos a game\\csgo", "cmd.h.botManagement": "GESTIÓN DE BOTS", "cmd.hint.botName": "nombre del bot", "cmd.hint.number": "número",
   },
 
   italian: {
@@ -269,6 +276,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Un'operazione su file non è riuscita. Assicurati che CS2 sia chiuso e riprova.",
     "errcat.config": "Impossibile salvare le impostazioni.",
     "errcat.internal": "Si è verificato un errore imprevisto.",
+    "st.wrongLocation": "File nella cartella sbagliata — spostali in game\\csgo", "cmd.h.botManagement": "GESTIONE BOT", "cmd.hint.botName": "nome bot", "cmd.hint.number": "numero",
   },
 
   russian: {
@@ -302,6 +310,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Не удалась операция с файлом. Убедитесь, что CS2 закрыт, и повторите попытку.",
     "errcat.config": "Не удалось сохранить настройки.",
     "errcat.internal": "Произошла непредвиденная ошибка.",
+    "st.wrongLocation": "Файлы в неправильной папке — переместите их в game\\csgo", "cmd.h.botManagement": "УПРАВЛЕНИЕ БОТАМИ", "cmd.hint.botName": "имя бота", "cmd.hint.number": "число",
   },
 
   ukrainian: {
@@ -335,6 +344,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Не вдалася операція з файлом. Переконайтеся, що CS2 закрито, і повторіть спробу.",
     "errcat.config": "Не вдалося зберегти налаштування.",
     "errcat.internal": "Сталася неочікувана помилка.",
+    "st.wrongLocation": "Файли в неправильній папці — перемістіть їх до game\\csgo", "cmd.h.botManagement": "КЕРУВАННЯ БОТАМИ", "cmd.hint.botName": "ім'я бота", "cmd.hint.number": "число",
   },
 
   polish: {
@@ -368,6 +378,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Operacja na pliku nie powiodła się. Upewnij się, że CS2 jest zamknięty, i spróbuj ponownie.",
     "errcat.config": "Nie można zapisać ustawień.",
     "errcat.internal": "Wystąpił nieoczekiwany błąd.",
+    "st.wrongLocation": "Pliki w złym folderze — przenieś je do game\\csgo", "cmd.h.botManagement": "ZARZĄDZANIE BOTAMI", "cmd.hint.botName": "nazwa bota", "cmd.hint.number": "liczba",
   },
 
   dutch: {
@@ -401,6 +412,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Een bestandsbewerking is mislukt. Zorg dat CS2 gesloten is en probeer het opnieuw.",
     "errcat.config": "De instellingen konden niet worden opgeslagen.",
     "errcat.internal": "Er is een onverwachte fout opgetreden.",
+    "st.wrongLocation": "Bestanden in de verkeerde map — verplaats ze naar game\\csgo", "cmd.h.botManagement": "BOTBEHEER", "cmd.hint.botName": "botnaam", "cmd.hint.number": "getal",
   },
 
   turkish: {
@@ -434,6 +446,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Bir dosya işlemi başarısız oldu. CS2'nin kapalı olduğundan emin olun ve tekrar deneyin.",
     "errcat.config": "Ayarlar kaydedilemedi.",
     "errcat.internal": "Beklenmeyen bir hata oluştu.",
+    "st.wrongLocation": "Dosyalar yanlış klasörde — game\\csgo içine taşıyın", "cmd.h.botManagement": "BOT YÖNETİMİ", "cmd.hint.botName": "bot adı", "cmd.hint.number": "sayı",
   },
 
   vietnamese: {
@@ -467,6 +480,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Thao tác tệp thất bại. Hãy đảm bảo CS2 đã đóng và thử lại.",
     "errcat.config": "Không thể lưu cài đặt.",
     "errcat.internal": "Đã xảy ra lỗi không mong muốn.",
+    "st.wrongLocation": "Tệp nằm sai thư mục — hãy chuyển vào game\\csgo", "cmd.h.botManagement": "QUẢN LÝ BOT", "cmd.hint.botName": "tên bot", "cmd.hint.number": "số",
   },
 
   thai: {
@@ -500,6 +514,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "การดำเนินการกับไฟล์ล้มเหลว ตรวจสอบว่าปิด CS2 แล้วและลองอีกครั้ง",
     "errcat.config": "ไม่สามารถบันทึกการตั้งค่าได้",
     "errcat.internal": "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+    "st.wrongLocation": "ไฟล์อยู่ผิดโฟลเดอร์ — ย้ายไปไว้ใน game\\csgo", "cmd.h.botManagement": "การจัดการบอท", "cmd.hint.botName": "ชื่อบอท", "cmd.hint.number": "จำนวน",
   },
 
   indonesian: {
@@ -533,6 +548,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Operasi file gagal. Pastikan CS2 ditutup dan coba lagi.",
     "errcat.config": "Pengaturan tidak dapat disimpan.",
     "errcat.internal": "Terjadi kesalahan yang tidak terduga.",
+    "st.wrongLocation": "Berkas di folder yang salah — pindahkan ke game\\csgo", "cmd.h.botManagement": "MANAJEMEN BOT", "cmd.hint.botName": "nama bot", "cmd.hint.number": "angka",
   },
 
   czech: {
@@ -566,6 +582,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Operace se souborem selhala. Ujistěte se, že je CS2 zavřený, a zkuste to znovu.",
     "errcat.config": "Nastavení se nepodařilo uložit.",
     "errcat.internal": "Došlo k neočekávané chybě.",
+    "st.wrongLocation": "Soubory ve špatné složce — přesuňte je do game\\csgo", "cmd.h.botManagement": "SPRÁVA BOTŮ", "cmd.hint.botName": "jméno bota", "cmd.hint.number": "číslo",
   },
 
   swedish: {
@@ -599,6 +616,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "En filåtgärd misslyckades. Se till att CS2 är stängt och försök igen.",
     "errcat.config": "Inställningarna kunde inte sparas.",
     "errcat.internal": "Ett oväntat fel inträffade.",
+    "st.wrongLocation": "Filer i fel mapp — flytta dem till game\\csgo", "cmd.h.botManagement": "BOTHANTERING", "cmd.hint.botName": "botnamn", "cmd.hint.number": "antal",
   },
 
   danish: {
@@ -632,6 +650,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "En filhandling mislykkedes. Sørg for, at CS2 er lukket, og prøv igen.",
     "errcat.config": "Indstillingerne kunne ikke gemmes.",
     "errcat.internal": "Der opstod en uventet fejl.",
+    "st.wrongLocation": "Filer i den forkerte mappe — flyt dem til game\\csgo", "cmd.h.botManagement": "BOTHÅNDTERING", "cmd.hint.botName": "botnavn", "cmd.hint.number": "tal",
   },
 
   norwegian: {
@@ -665,6 +684,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "En filoperasjon mislyktes. Sørg for at CS2 er lukket, og prøv igjen.",
     "errcat.config": "Innstillingene kunne ikke lagres.",
     "errcat.internal": "Det oppstod en uventet feil.",
+    "st.wrongLocation": "Filer i feil mappe — flytt dem til game\\csgo", "cmd.h.botManagement": "BOTHÅNDTERING", "cmd.hint.botName": "botnavn", "cmd.hint.number": "tall",
   },
 
   finnish: {
@@ -698,6 +718,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Tiedostotoiminto epäonnistui. Varmista, että CS2 on suljettu, ja yritä uudelleen.",
     "errcat.config": "Asetuksia ei voitu tallentaa.",
     "errcat.internal": "Tapahtui odottamaton virhe.",
+    "st.wrongLocation": "Tiedostot väärässä kansiossa — siirrä ne kansioon game\\csgo", "cmd.h.botManagement": "BOTTIEN HALLINTA", "cmd.hint.botName": "botin nimi", "cmd.hint.number": "numero",
   },
 
   hungarian: {
@@ -731,6 +752,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Egy fájlművelet sikertelen volt. Győződj meg róla, hogy a CS2 be van zárva, és próbáld újra.",
     "errcat.config": "A beállításokat nem sikerült menteni.",
     "errcat.internal": "Váratlan hiba történt.",
+    "st.wrongLocation": "A fájlok rossz mappában vannak — helyezd át a game\\csgo mappába", "cmd.h.botManagement": "BOTOK KEZELÉSE", "cmd.hint.botName": "bot neve", "cmd.hint.number": "szám",
   },
 
   romanian: {
@@ -764,6 +786,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "O operațiune cu fișiere a eșuat. Asigură-te că CS2 este închis și încearcă din nou.",
     "errcat.config": "Setările nu au putut fi salvate.",
     "errcat.internal": "A apărut o eroare neașteptată.",
+    "st.wrongLocation": "Fișiere în folderul greșit — mută-le în game\\csgo", "cmd.h.botManagement": "GESTIONARE BOȚI", "cmd.hint.botName": "nume bot", "cmd.hint.number": "număr",
   },
 
   greek: {
@@ -797,6 +820,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Μια λειτουργία αρχείου απέτυχε. Βεβαιωθείτε ότι το CS2 είναι κλειστό και δοκιμάστε ξανά.",
     "errcat.config": "Δεν ήταν δυνατή η αποθήκευση των ρυθμίσεων.",
     "errcat.internal": "Παρουσιάστηκε ένα απρόσμενο σφάλμα.",
+    "st.wrongLocation": "Τα αρχεία είναι σε λάθος φάκελο — μετακινήστε τα στο game\\csgo", "cmd.h.botManagement": "ΔΙΑΧΕΙΡΙΣΗ BOT", "cmd.hint.botName": "όνομα bot", "cmd.hint.number": "αριθμός",
   },
 
   bulgarian: {
@@ -830,6 +854,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Файлова операция е неуспешна. Уверете се, че CS2 е затворен, и опитайте отново.",
     "errcat.config": "Настройките не могат да бъдат запазени.",
     "errcat.internal": "Възникна неочаквана грешка.",
+    "st.wrongLocation": "Файловете са в грешната папка — преместете ги в game\\csgo", "cmd.h.botManagement": "УПРАВЛЕНИЕ НА БОТОВЕ", "cmd.hint.botName": "име на бот", "cmd.hint.number": "число",
   },
 
   // Portuguese (pt-PT) and Brazilian Portuguese
@@ -864,6 +889,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Uma operação de ficheiro falhou. Certifique-se de que o CS2 está fechado e tente novamente.",
     "errcat.config": "Não foi possível guardar as definições.",
     "errcat.internal": "Ocorreu um erro inesperado.",
+    "st.wrongLocation": "Ficheiros na pasta errada — mova-os para game\\csgo", "cmd.h.botManagement": "GESTÃO DE BOTS", "cmd.hint.botName": "nome do bot", "cmd.hint.number": "número",
   },
 
   brazilian: {
@@ -897,6 +923,7 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Uma operação de arquivo falhou. Verifique se o CS2 está fechado e tente novamente.",
     "errcat.config": "Não foi possível salvar as configurações.",
     "errcat.internal": "Ocorreu um erro inesperado.",
+    "st.wrongLocation": "Arquivos na pasta errada — mova-os para game\\csgo", "cmd.h.botManagement": "GERENCIAMENTO DE BOTS", "cmd.hint.botName": "nome do bot", "cmd.hint.number": "número",
   },
 
   // Latin-American Spanish — reuse Spanish with minor wording
@@ -931,5 +958,6 @@ export const DICTS: Record<string, Partial18n> = {
     "errcat.io": "Una operación de archivo falló. Asegúrate de que CS2 esté cerrado e inténtalo de nuevo.",
     "errcat.config": "No se pudo guardar la configuración.",
     "errcat.internal": "Ocurrió un error inesperado.",
+    "st.wrongLocation": "Archivos en la carpeta incorrecta — muévelos a game\\csgo", "cmd.h.botManagement": "GESTIÓN DE BOTS", "cmd.hint.botName": "nombre del bot", "cmd.hint.number": "número",
   },
 };

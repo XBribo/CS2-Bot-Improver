@@ -41,6 +41,8 @@ export type FilesReport = {
   total: number;
   present: number;
   missing: string[];
+  /** Wrong folder the plugin was extracted into, if detected. */
+  misplaced: string | null;
 };
 
 export type DifficultyLevel = "Low" | "Medium" | "High";
@@ -134,6 +136,7 @@ export const api = {
     invoke<ModeInfo>("set_mode", { csgo, mode }),
   reconcileLaunchOptions: () => invoke<number>("reconcile_launch_options"),
   launchCs2: () => invoke<LaunchResult>("launch_cs2"),
+  reconcileCoreJson: (csgo: string) => invoke<void>("reconcile_core_json", { csgo }),
   getBotItems: (csgo: string) => invoke<BotItemsState>("get_bot_items", { csgo }),
   setBotItem: (csgo: string, item: BotItemKey, on: boolean) =>
     invoke<BotItemsState>("set_bot_item", { csgo, item, on }),
