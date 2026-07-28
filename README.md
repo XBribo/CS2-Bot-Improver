@@ -229,12 +229,14 @@ Run `sv_standable_normal 0.7` in the game console.
 
 </details>
 
-### Where can I safely use this plugin?
+### What are the supported-use and responsibility boundaries?
 
 > [!WARNING]
-> This project is intended for offline bot matches, self-hosted private games with friends, and private dedicated servers. Its automatic cosmetic-assignment path targets bots and is not intended to alter human-player inventories or cosmetics, consistent with [Valve's CS2 GSLT rules](https://help.steampowered.com/en/faqs/view/07AF-502E-A104-BD4B).
+> This project is intended for offline bot matches, self-hosted private games with friends, and private dedicated servers used for bot play. `BotRandomizer` applies cosmetics only to entities the game identifies as bots; it does not grant, falsify, or alter the Steam inventory, cosmetics, or profile of a human-controlled player. This boundary is designed to follow [Valve's CS2 community-server and GSLT rules](https://help.steampowered.com/en/faqs/view/07AF-502E-A104-BD4B).
 >
-> Do not use the project in Valve official matchmaking, on VAC-secured public servers, on [FACEIT](https://support.faceit.com/hc/en-us/articles/360015788779-What-is-deemed-to-be-a-cheat), on third-party public community servers, or to bypass any anti-cheat or security control. Before entering those services, switch the Panel to **Online Mode** or manually restore the normal game files, remove `-insecure`, and restart CS2. Rights granted by the [AGPL-3.0 license](LICENSE) do not authorize violations of platform or server rules. To the maximum extent permitted by applicable law, users assume responsibility for out-of-scope use and any resulting GSLT, server, FACEIT, VAC, game, or account sanctions. This notice is informational and is not legal advice.
+> The project is not intended or supported for Valve official matchmaking, VAC-secured public servers, [FACEIT](https://support.faceit.com/hc/en-us/articles/360015788779-What-is-deemed-to-be-a-cheat), or other third-party public community servers. It must not be used to bypass anti-cheat systems, file verification, or any other security control. Before entering any such service, switch the Panel to **Online Mode** or restore the standard game files manually, remove `-insecure`, and restart CS2.
+>
+> The [AGPL-3.0 license](LICENSE) permits modification and redistribution of the source code; it does not grant access to third-party services or authorize violations of their rules. To the maximum extent permitted by applicable law, anyone who uses or deploys the project outside the scope described above, modifies it to evade security controls, or otherwise violates third-party terms assumes all resulting risk and responsibility, including GSLT or server sanctions, FACEIT or community-server bans, VAC or game bans, and Steam account restrictions. The maintainers and contributors disclaim liability for those consequences. This notice is informational and is not legal advice.
 
 ## Credits
 
