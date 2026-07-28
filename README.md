@@ -2,8 +2,6 @@
 
 # CS2-Bot-Improver
 
-**Smarter, more human-like bots for Counter-Strike 2**
-
 [![Latest release](https://img.shields.io/github/v/release/ed0ard/CS2-Bot-Improver?display_name=tag&sort=semver)](https://github.com/ed0ard/CS2-Bot-Improver/releases/latest)
 [![Release downloads](https://img.shields.io/github/downloads/ed0ard/CS2-Bot-Improver/total)](https://github.com/ed0ard/CS2-Bot-Improver/releases)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
@@ -15,34 +13,34 @@
 
 </div>
 
-CS2 Bot Improver enhances Counter-Strike 2 bots for offline matches and private games with friends. It improves their aim, movement, grenade usage, economy, decision-making, and personality, and can be installed on either a client or a dedicated server.
+CS2-Bot-Improver enhances Counter-Strike 2 bots for offline matches and private games with friends. It improves their aim, movement, nade throwing, personalities, strategies, and can be installed on either a client or a dedicated server.
 
-> ⭐ If you enjoy the project, consider [giving it a star](https://github.com/ed0ard/CS2-Bot-Improver). Your support helps keep development moving.
+**Your stars⭐ are my motivation to keep updating**
 
 ## Features
 
-| Area | Improvements |
+| Field | Improvements |
 | --- | --- |
-| **Aim and combat** | More accurate, human-like aim; spraying, flicking, smoke spamming, and anti-flash behavior |
-| **Grenades** | Situational smoke, flashbang, HE grenade, and Molotov usage |
-| **Movement** | Better movement and fixes for most common bot-stuck situations |
+| **Aim and combat** | More accurate, human-like aim; spraying, flicking, smoke spamming, and anti-flash |
+| **Grenades** | Situational Smoke, Flashbang, HE grenade, and Molotov throwing |
+| **Movement** | Better movement and fixes for most bot-stuck situations |
 | **Strategy** | Smarter, more organized bots with improved awareness and decision-making |
 | **Economy** | Expanded weapon purchases and overhauled economy management |
-| **Personalities** | Pro and random player names, with pro characteristics based on [HLTV](https://www.hltv.org/) statistics |
+| **Personalities** | Pro and random player names, with pro characteristics based on [HLTV](https://www.hltv.org/) stats |
 | **Customization** | Per-bot knives, gloves, weapon skins, stickers, charms, agents, music kits, avatars, and profiles |
-| **Game experience** | Cleaner bot names, bot-friendly rules, and extra console commands |
+| **Game experience** | Bot names without prefixes, bot-friendly rules, and extra console commands for fun |
 
 ## Installation
 
-Download the package for your operating system from the [latest release](https://github.com/ed0ard/CS2-Bot-Improver/releases/latest).
-
-> [!NOTE]
-> Running a dedicated server that also hosts non-bot matches? On Windows, use `CS2BotImprover_rules_unchanged.zip` to preserve the standard game rules.
+Download the package for your operating system from the **[latest release](https://github.com/ed0ard/CS2-Bot-Improver/releases/latest)**.
 
 ### Windows
 
-1. Download and extract `CS2BotImprover.zip`.
-2. Move `Panel v1.4.3.exe` somewhere convenient.
+1. Download and extract **CS2BotImprover.zip**.
+> [!NOTE]
+> Running a dedicated server that is not only for bot matches?  
+On Windows, please download **CS2BotImprover_rules_unchanged.zip** to preserve the standard game rules.
+2. Move **Panel v1.4.3.exe** somewhere convenient.
 
    <img width="128" height="128" alt="CS2 Bot Improver Panel application icon" src="https://github.com/user-attachments/assets/7271dc7d-2436-484b-8359-6531f4abd710" />
 
@@ -54,14 +52,14 @@ Download the package for your operating system from the [latest release](https:/
 
    <img width="540" height="181" alt="Copying the Windows package files into game/csgo" src="https://github.com/user-attachments/assets/6a8645fc-78e7-4f3a-92d3-5d1b6d913918" />
 
-5. Open `Panel v1.4.3.exe`, select **Bot Mode**, and click **Launch CS2**.
+5. Open `Panel v1.4.3.exe`, select **Bot Mode**, then click **Launch CS2**.
 
    <img width="339" height="129" alt="Selecting Bot Mode and launching CS2 from the Panel" src="https://github.com/user-attachments/assets/dc806991-c940-43cf-a614-f49012fae4a7" />
 
 ### Linux
 
-1. Download and extract `CS2BotImprover_for_Linux.zip`.
-2. Move `Commands.txt` somewhere convenient for quick access.
+1. Download and extract **CS2BotImprover_for_Linux.zip**.
+2. Move `Commands.txt` somewhere convenient.
 3. Open your CS2 installation folder and navigate to `game/csgo`.
 
    <img width="405" height="256" alt="The game/csgo directory inside a CS2 installation" src="https://github.com/user-attachments/assets/ae2be90e-6742-4f1f-8e0c-096b728d5dbd" />
@@ -81,31 +79,32 @@ Download the package for your operating system from the [latest release](https:/
 
 | Command | Description |
 | --- | --- |
-| `bot_aim mixed` | Select aiming spots dynamically based on the situation. **Default.** |
+| `bot_aim mixed` | Select aiming spots dynamically based on situations. **(Default)** |
 | `bot_aim head` | Prioritize aiming at the head. |
 | `bot_aim body` | Prioritize aiming at the torso. |
 | `bot_aim` | Show the current aim mode. |
 
-### Grenades
+### Nades
 
 | Command | Description |
 | --- | --- |
-| `bot_nades off` | Disable bot grenade usage. |
-| `bot_nades less` | Use the normal decision logic with lower grenade-count limits. |
-| `bot_nades normal` | Use limits close to those of human players. **Default.** |
-| `bot_nades more` | Use the normal decision logic with higher grenade-count limits. |
-| `bot_nades max` | Apply minimal limits and reduce the time bots spend deciding whether to throw. |
-| `bot_nades` | Show the current grenade mode. |
+| `bot_nades off` | Disable bot nade usage. |
+| `bot_nades less` | Use the same decision logic as normal mode with lower count limits. |
+| `bot_nades normal` | Use count limits close to those of human players. **(Default)** |
+| `bot_nades more` | Use the same decision logic as normal mode with higher count limits. |
+| `bot_nades max` | Bots have minimal limitations and think less before throwing nades. |
+| `bot_nades` | Show the current nade mode. |
 
 ### Skins
 
 | Command | Description |
 | --- | --- |
-| `br_reroll` | Reroll every bot's cosmetics on its next spawn. |
+| `br_reroll` | Reroll every bot's skins on their next spawn. |
 
 ### Buying
 
-Enter a weapon name in the game console to give every bot that weapon starting with the next round. Enter `bot_buy` to restore normal buying behavior.
+Enter a weapon name in the game console to give every bot this weapon from the next round.  
+Enter `bot_buy` to restore normal purchase behavior.
 
 <details>
 <summary><strong>Show supported weapon names</strong></summary>
@@ -123,7 +122,7 @@ negev     m249
 
 ### Pro teams
 
-Copy a team command from [Commands.txt](Commands.txt) and paste it into the game console. You can add your own teams using the same format.
+Copy a block of team commands from [Commands.txt](Commands.txt) and paste it into the game console. You can also add your own teams using the same format.
 
 For example, the following block in `Commands.txt` adds Team Vitality to the CT side:
 
@@ -131,11 +130,11 @@ For example, the following block in `Commands.txt` adds Team Vitality to the CT 
 
 ### Knives
 
-Point at the ground and press <kbd>\</kbd> to spawn the available knives at that location.
+Point at the ground and press `\` on your keyboard to generate all kinds of knives there.
 
 ### Flying Scoutsman
 
-After a match begins, use `scouts_on` or `scouts_off` to enable or disable Flying Scoutsman mode.
+After a match begins, use the command `scouts_on` or `scouts_off` to enable or disable Flying Scoutsman mode.
 
 ## Panel Guide (Windows Only)
 
@@ -144,14 +143,14 @@ After a match begins, use `scouts_on` or `scouts_off` to enable or disable Flyin
 | Indicator | Meaning |
 | --- | --- |
 | 🟢 Green | No issues detected. |
-| 🟡 Yellow | Restart CS2 to apply the changes. |
-| 🔴 Red | Files are missing. Click the red indicator to see which files are missing. |
+| 🟡 Yellow | Restart CS2 to apply changes. |
+| 🔴 Red | Files missing. Click the red light to view the list of missing files. |
 
 <img width="481" height="82" alt="Green, yellow, and red Panel status indicators" src="https://github.com/user-attachments/assets/26a947e2-4e0e-423f-bce8-f220d88509a2" />
 
-### Online Mode and Bot Mode
+### Matchmaking & Bot Mode Toggle
 
-Select the mode you want, then click **Launch CS2**.
+Select your desired mode, then click **Launch CS2**.
 
 <img width="472" height="179" alt="Online Mode and Bot Mode selector in the Panel" src="https://github.com/user-attachments/assets/3f9254fa-4cbe-4854-8fd1-0f35228fff77" />
 
@@ -161,69 +160,69 @@ Click the <img width="31" height="32" alt="Settings" src="https://github.com/use
 
 ### Command browser
 
-Open **Commands**, click a block to copy it automatically, or type a keyword to search.
+Click **Commands**, click a block to copy it automatically, or type keywords to search.
 
 <img width="350" height="420" alt="Searchable command browser in the Panel" src="https://github.com/user-attachments/assets/957cfafb-900d-4450-b985-13d3e8efc375" />
 
 ## FAQ
 
 <details>
-<summary><strong>How do I play bot matches with friends?</strong></summary>
+<summary><strong>How to play bot matches with friends?</strong></summary>
 
 1. Start a bot match, enter any required commands, and then run `status` in the console.
 
    <img width="597" height="141" alt="The steamid value shown by the status command" src="https://github.com/user-attachments/assets/792c4b4f-1d56-4a39-9186-b301cbff1846" />
 
-2. Copy the text after `steamid:` and add `connect ` before it, including the space.
-3. Send the complete command to your friends and have them paste it into their consoles.
+2. Copy the text after `steamid:`, add `connect ` before it (don't forget the space between them) 
+3. Send the full command to your friends and have them paste it into their consoles.
 
 </details>
 
 <details>
-<summary><strong>How do I manually change the difficulty?</strong></summary>
+<summary><strong>How to manually change the difficulty level?</strong></summary>
 
-1. Navigate to `game/csgo/overrides` in your CS2 installation.
-2. Open `Low` for easy difficulty, `Medium` for mixed difficulty based on HLTV statistics (**default**), or `High` for extreme difficulty.
-3. Before launching the game, copy the selected `botprofile.vpk` into `game/csgo/overrides`.
+1. Navigate to `game/csgo/overrides` in your CS2 installation folder.
+2. Open `Low` for easy difficulty, `Medium` for mixed difficulty based on HLTV stats (**default**), or `High` for extreme difficulty.
+3. Copy the selected `botprofile.vpk` into `game/csgo/overrides` before launching the game.
 
 </details>
 
 <details>
-<summary><strong>How do I manually switch back to normal online matchmaking?</strong></summary>
+<summary><strong>How to manually switch back to normal online matchmaking mode?</strong></summary>
 
-1. Navigate to `game/csgo/backup/Online` in your CS2 installation.
-2. Copy `gameinfo.gi` into `game/csgo` and replace the destination file.
+1. Navigate to `game/csgo/backup/Online` in your CS2 installation folder.
+2. Copy `gameinfo.gi` into `game/csgo` (Replace the file in the destination).
 3. Remove `-insecure` from your launch options.
 
-To play with bots again, copy `gameinfo.gi` from `game/csgo/backup/WithBots` into `game/csgo`, replace the destination file, and restore the launch option.
+To play with bots again, copy `gameinfo.gi` from `game/csgo/backup/WithBots` into `game/csgo`, and restore the launch option.
 
 </details>
 
 <details>
-<summary><strong>How do I disable bot weapon skins, agents, music kits, knives, and gloves?</strong></summary>
+<summary><strong>How to manually disable bot weapon skins, agents, music kits, knives, and gloves?</strong></summary>
 
-1. Navigate to `game/csgo/addons/counterstrikesharp/plugins`.
-2. Rename `BotRandomizer` to `BotRandomizer_disabled`.
+1. Navigate to `game/csgo/addons/counterstrikesharp/plugins` in your CS2 installation folder.
+2. Rename `BotRandomizer` folder to `BotRandomizer_disabled`.
 3. Open `addons/counterstrikesharp/configs/core.json` and set `FollowCS2ServerGuidelines` to `true`.
 
 </details>
 
 <details>
-<summary><strong>How do I disable bot Steam profiles?</strong></summary>
+<summary><strong>How to manually disable bot Steam profiles?</strong></summary>
 
-Navigate to `game/csgo/addons` and rename `BotHider` to `BotHider_disabled`.
+Navigate to `game/csgo/addons` in your CS2 installation folder and rename `BotHider` folder to `BotHider_disabled`.
 
 </details>
 
 <details>
-<summary><strong>How do I use the plugin on Workshop maps?</strong></summary>
+<summary><strong>How to use the plugin normally on Workshop maps?</strong></summary>
 
 Add `-disable_workshop_command_filtering` to your launch options.
 
 </details>
 
 <details>
-<summary><strong>How do I surf normally?</strong></summary>
+<summary><strong>How to surf normally?</strong></summary>
 
 Run `sv_standable_normal 0.7` in the game console.
 
@@ -232,11 +231,11 @@ Run `sv_standable_normal 0.7` in the game console.
 ### What are the supported-use and responsibility boundaries?
 
 > [!WARNING]
-> This project is intended for offline bot matches, self-hosted private games with friends, and private dedicated servers used for bot play. `BotRandomizer` applies cosmetics only to entities the game identifies as bots; it does not grant, falsify, or alter the Steam inventory, cosmetics, or profile of a human-controlled player. This boundary is designed to follow [Valve's CS2 community-server and GSLT rules](https://help.steampowered.com/en/faqs/view/07AF-502E-A104-BD4B).
+> This project is intended for offline bot matches, self-hosted private games with friends, and private dedicated servers used for bot play. `BotRandomizer` applies cosmetics **only to bots**; it does not grant, falsify, or alter the Steam inventory, skins, or profile of a human player. **This boundary is designed to follow [Valve's CS2 community-server and GSLT rules](https://help.steampowered.com/en/faqs/view/07AF-502E-A104-BD4B).**
 >
-> The project is not intended or supported for Valve official matchmaking, VAC-secured public servers, [FACEIT](https://support.faceit.com/hc/en-us/articles/360015788779-What-is-deemed-to-be-a-cheat), or other third-party public community servers. It must not be used to bypass anti-cheat systems, file verification, or any other security control. Before entering any such service, switch the Panel to **Online Mode** or restore the standard game files manually, remove `-insecure`, and restart CS2.
+> The project is not intended or supported for Valve official matchmaking, [FACEIT](https://support.faceit.com/hc/en-us/articles/360015788779-What-is-deemed-to-be-a-cheat), or other third-party public community servers.
 >
-> The [AGPL-3.0 license](LICENSE) permits modification and redistribution of the source code; it does not grant access to third-party services or authorize violations of their rules. To the maximum extent permitted by applicable law, anyone who uses or deploys the project outside the scope described above, modifies it to evade security controls, or otherwise violates third-party terms assumes all resulting risk and responsibility, including GSLT or server sanctions, FACEIT or community-server bans, VAC or game bans, and Steam account restrictions. The maintainers and contributors disclaim liability for those consequences. This notice is informational and is not legal advice.
+> The [AGPL-3.0 license](LICENSE) does not grant access to third-party services or authorize violations of their rules. To the maximum extent permitted by applicable law, anyone who uses or deploys the project outside the scope described above, modifies it to evade security controls, or otherwise violates third-party terms assumes all resulting risks and responsibilities, including GSLT or server sanctions, FACEIT or community-server bans, VAC or game bans. The maintainers and contributors disclaim liability for those consequences.
 
 ## Credits
 
@@ -253,11 +252,10 @@ Run `sv_standable_normal 0.7` in the game console.
 - [CSGOBetterBots](https://github.com/manicogaming/CSGOBetterBots/blob/master/addons/sourcemod/data/bot_info.json) by [manico](https://github.com/manicogaming)
 - [CS2-Smarter-Bot](https://github.com/ed0ard/CS2-Smarter-Bot)
 - [CS2-BotAI](https://github.com/ed0ard/CS2-BotAI), forked from [Austin](https://github.com/Austinbots)
-- [CS2-BotAI-for-Linux](https://github.com/Austinbots/CS2-BotAI)
 - [CS2-Bot-Buy](https://github.com/ed0ard/CS2-Bot-Buy)
 - [RoundDamageRecap](https://github.com/YuGeYu/LBTV-CS2-Bot-Enhancer/tree/main/addons/counterstrikesharp/plugins/RoundDamageRecap) by [YuGeYu](https://github.com/YuGeYu)
 - [Apple-Style-GUI](https://github.com/ed0ard/Apple-Style-GUI)
 
 ## License
 
-CS2 Bot Improver is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+[GNU Affero General Public License v3.0](LICENSE).
