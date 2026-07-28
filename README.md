@@ -258,4 +258,4 @@ Run `sv_standable_normal 0.7` in the game console.
 
 ## License
 
-[GNU Affero General Public License v3.0](LICENSE).
+[GNU Affero General Public License v3.0](LICENSE)
