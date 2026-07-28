@@ -15,7 +15,7 @@
 
 CS2-Bot-Improver enhances Counter-Strike 2 bots for offline matches and private games with friends. It improves their aim, movement, nade throwing, personalities, strategies, and can be installed on either a client or a dedicated server.
 
-**Your stars⭐ are my motivation to keep updating**
+## **Your stars⭐ are my motivation to keep updating**
 
 ## Features
 
